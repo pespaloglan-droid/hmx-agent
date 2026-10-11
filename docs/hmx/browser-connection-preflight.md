@@ -25,6 +25,24 @@ Mevcut panelin kapsamı: [birinci adım](browser-panel-phase-1.md).
 
 ## Bağlantı yöntemi için karar kapısı
 
+Chrome 144+ için ilk yerel ön kontrol, kullanıcı Chrome'un
+`chrome://inspect/#remote-debugging` ekranındaki izni etkinleştirdikten sonra:
+
+```powershell
+node .\scripts\hmx\chrome-connection-probe.mjs
+```
+
+Bu Windows/Node.js 24 testi, sabit standart Chrome kökündeki
+`DevToolsActivePort` dosyasından doğrudan loopback WebSocket adresi oluşturur.
+Chrome'un bağlantı isteği kullanıcı tarafından onaylanmalıdır. Yalnızca
+`Browser.getVersion` gönderilir; sekme listesi, sayfa içeriği, hesap bilgisi veya
+çerez okunmaz. Sonuç yalnızca sürüm ve protokol bilgisidir; uç nokta yayımlanmaz.
+Bağlantı en fazla 60 saniye bekler ve test bitince yalnız kendi WebSocket'i kapanır,
+Chrome kapanmaz. Hermes ayarları değiştirilmez; panelde kalıcı bağlantı oluşturmaz.
+Başarı doğru Chrome profilinin, Flow oturumunun veya çoklu profil ayrımının kanıtı
+değildir. Üretim denemesi başlatılmaz. Test bittiğinde veya ertelendiğinde Chrome
+hata ayıklama izni kapatılmalıdır.
+
 1. Kullanıcının Windows/Chrome sürümü ve desteklenen bağlantı yolu doğrulanır.
    Normal Chrome'un mevcut profilinin yalnızca bulunmuş olması CDP erişimi
    veya Google oturumunun kullanılabilirliği anlamına gelmez.
