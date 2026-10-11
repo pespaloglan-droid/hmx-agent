@@ -50,3 +50,14 @@ export interface BrowserFlowResult {
   account_verified?: false;
   checked_at?: string;
 }
+
+export interface FlowProjectResult {
+  state: BrowserConnectionProbe["state"] | "invalid_project" | "project_mismatch" | "target_unavailable"
+    | "read_blocked" | "project_ready" | "project_inconclusive";
+  markers?: { page_ready: boolean; composer_empty: boolean; agent_mode_visible: boolean;
+    stop_button_visible: boolean; send_enabled: boolean; textarea_count: number;
+    contenteditable_count: number; send_button_count: number };
+  checked_at?: string;
+  account_verified?: false;
+  production_authorized?: false;
+}

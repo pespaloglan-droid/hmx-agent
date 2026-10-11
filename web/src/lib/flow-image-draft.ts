@@ -33,6 +33,6 @@ export function parseImageDraft(source: string): ImageDraftResult {
 }
 
 export function imageDraftProject(value: string): string | null {
-  const match = /^https:\/\/flow\.google\.com\/project\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\/?$/i.exec(value.trim());
+  const match = /^https:\/\/flow\.google\.com\/project\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(?:\/collection\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})?\/?$/i.exec(value.trim());
   return match ? `https://flow.google.com/project/${match[1].toLowerCase()}` : null;
 }

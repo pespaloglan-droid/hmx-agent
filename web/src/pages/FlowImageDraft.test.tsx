@@ -23,7 +23,7 @@ async function input(name: string, value: string) {
 beforeEach(async () => {
   network.mockReset(); vi.stubGlobal("fetch", network);
   container = document.createElement("div"); document.body.append(container); root = createRoot(container);
-  await act(async () => root.render(<FlowImageDraft targetLabel="Google Flow fixture" />));
+  await act(async () => root.render(<FlowImageDraft targetId="flow-1" targetLabel="Google Flow fixture" />));
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 
@@ -38,7 +38,7 @@ describe("offline image preparation", () => {
     expect(container.textContent).toContain("001_sahil.jpg");
     expect(container.textContent).toContain("002_orman.jpg");
     expect(network).not.toHaveBeenCalled();
-    expect(container.textContent).toContain("eşleşmesi henüz doğrulanmaz");
+    expect(container.textContent).toContain("üretim otomasyonu henüz uygulanmadı");
   });
   it("blocks missing project URLs, empty prompts and name collisions", async () => {
     await click(button("Taslağı kontrol et"));
@@ -58,7 +58,7 @@ describe("offline image preparation", () => {
   });
   it("clears draft when remounted for a different selected tab", async () => {
     await input("flow-draft-source", "private_name | PRIVATE PROMPT");
-    await act(async () => root.render(<FlowImageDraft key="new-tab" targetLabel="Another Flow tab" />));
+    await act(async () => root.render(<FlowImageDraft key="new-tab" targetId="flow-2" targetLabel="Another Flow tab" />));
     expect((container.querySelector('textarea') as HTMLTextAreaElement).value).toBe("");
     expect(container.textContent).not.toContain("PRIVATE PROMPT");
   });

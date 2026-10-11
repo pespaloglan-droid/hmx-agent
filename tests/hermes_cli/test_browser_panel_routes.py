@@ -173,3 +173,19 @@ def test_flow_check_passes_only_the_explicit_target(client, monkeypatch):
     assert response.status_code == 200
     assert seen == ["flow-2"]
     assert response.json()["account_verified"] is False
+
+def test_project_check_requires_auth_consent_and_only_fixed_fields(client, monkeypatch):
+    calls = []
+    async def check(target, url):
+        calls.append((target, url))
+        return {"state": "project_ready", "production_authorized": False}
+    monkeypatch.setattr(browser, "check_flow_project", check)
+    body = {"consent": True, "target_id": "chosen", "project_url": "https://flow.google.com/project/11111111-2222-3333-4444-555555555555"}
+    assert client.post("/api/browser/flow/project", json=body).status_code == 401
+    assert client.post("/api/browser/flow/project", headers=HEADERS, json={**body, "consent": False}).status_code == 400
+    assert client.post("/api/browser/flow/project", headers=HEADERS, json={**body, "expression": "CLICK"}).status_code == 422
+    assert calls == []
+    response = client.post("/api/browser/flow/project", headers=HEADERS, json=body)
+    assert response.status_code == 200
+    assert calls == [(body["target_id"], body["project_url"])]
+    assert response.json()["production_authorized"] is False

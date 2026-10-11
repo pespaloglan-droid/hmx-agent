@@ -189,3 +189,43 @@ scripts/run_tests.sh tests/tools/test_browser_use_cli.py -k 'BackendCdpResolutio
 
 Tam Hermes Python 3.14 çalışma zamanı ve gerçek Windows Chrome bağlantısı ayrıca
 doğrulanmalıdır. Ana dal kabul testi bitmeden birleştirilmez.
+## Exact-project and Agent composer preflight (no submission)
+
+After a valid local image draft, a separate unchecked consent and button initiate
+`POST /api/browser/flow/project`. It accepts only `consent:true`, one `target_id`
+and a bounded project URL. Session authentication remains mandatory.
+
+Both frontend and backend now accept the observed
+`/project/<UUID>/collection/<UUID>` form as a reference to its parent project;
+unknown suffixes, queries, fragments and non-Flow origins are rejected. The
+preflight never navigates to the entered address. Fresh target metadata must
+match the requested project, and a second synchronous origin/project guard
+executes before DOM inspection. A different target/project never becomes a
+fallback. Only the selected target is attached and detached.
+
+The fixed side-effect-guarded DOM expression returns page-ready, empty-editor,
+Agent-label and stop/send-control markers plus bounded textarea/contenteditable
+counts. It returns no editor values, project content, account data, cookies or
+raw HTML. Existing editor text is preserved. The label/control vocabulary is
+English/Turkish/Russian and may not match the live UI; unknown/ambiguous controls
+produce an inconclusive result, not a broadened permission or a click retry.
+A disabled send control is expected with an empty editor and is reported as such.
+
+A `project_ready` result is an observation, **not production authorization**:
+account/profile identity, active Agent-mode selection, model, credit budget and
+result tracking still need implementation/validation before dispatch. No filling,
+submit, generation, project creation, download or config mutation is performed.
+The operation shares the one-shot Chrome lock, limits total work to 75 seconds,
+uses no proxy, suppresses raw WebSocket debug logging and closes its test session.
+Draft edits invalidate the displayed preflight by unmounting it; consent loss,
+target changes and refresh clear draft state. An already-started read-only
+request may complete within its timeout after leaving the panel.
+
+Validation: 499 web tests, 89 targeted Python tests in the isolated Python 3.13
+environment, TypeScript, changed-file lint and production build passed. A local
+Chromium fixture exercised the actual guarded expression against a synthetic
+project/collection page, a changed project and an existing private editor draft.
+It verified no private values returned and no submission. Desktop/mobile fixtures
+verified independent consent, explicit request, exact target/project payload,
+marker display and no horizontal overflow. The real Windows composer shape is
+not yet verified; the user's next preflight result supplies that evidence.

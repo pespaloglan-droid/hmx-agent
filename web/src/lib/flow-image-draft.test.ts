@@ -38,6 +38,7 @@ describe("local image draft parser", () => {
   it("allows only exact Flow project URLs, not queries, credentials or lookalikes", () => {
     const url = "https://flow.google.com/project/11111111-2222-3333-4444-555555555555";
     expect(imageDraftProject(url + "/")).toBe(url);
+    expect(imageDraftProject(url + "/collection/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")).toBe(url);
     for (const value of [url + "?secret=x", url + "/other", url.replace("https:", "http:"), url.replace("flow.google.com", "flow.google.com.evil.invalid"), "https://flow.google.com", "javascript:alert(1)"]) expect(imageDraftProject(value)).toBeNull();
   });
 });

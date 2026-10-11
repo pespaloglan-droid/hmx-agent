@@ -3,12 +3,13 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, StrictBool
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from starlette.concurrency import run_in_threadpool
 
 from hermes_cli.browser_inventory import browser_configuration_status, discover_browsers
 from hermes_cli.browser_connection_probe import run_browser_probe
 from hermes_cli.browser_flow_check import check_flow_tab, list_flow_tabs
+from hermes_cli.browser_flow_project import check_flow_project
 from hermes_cli.web_deps import late
 from hermes_cli.web_routers._common import config_scoped_to_thread
 
@@ -29,7 +30,19 @@ class ProbeConsent(BaseModel):
 
 
 class FlowTargetConsent(ProbeConsent):
-    target_id: str
+    target_id: str = Field(min_length=1, max_length=128)
+
+
+class FlowProjectConsent(FlowTargetConsent):
+    project_url: str = Field(min_length=1, max_length=512)
+
+
+@router.post("/api/browser/flow/project")
+async def browser_flow_project(request: Request, body: FlowProjectConsent):
+    _require_token(request)
+    if body.consent is not True:
+        raise HTTPException(status_code=400, detail="Flow project preflight consent is required")
+    return await check_flow_project(body.target_id, body.project_url)
 
 
 @router.post("/api/browser/flow/tabs")

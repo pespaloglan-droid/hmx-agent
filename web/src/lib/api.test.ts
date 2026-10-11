@@ -55,6 +55,18 @@ function jsonFetchMock(body: unknown = { ok: true }) {
 }
 
 describe("fetchJSON", () => {
+  it("sends only explicit project preflight consent, selected target and project with auth", async () => {
+    const fetchMock = jsonFetchMock({ state: "project_ready", production_authorized: false });
+    vi.stubGlobal("fetch", fetchMock);
+    const project = "https://flow.google.com/project/11111111-2222-3333-4444-555555555555";
+    await api.checkFlowProject("chosen", project);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/flow/project");
+    expect((init?.headers as Headers).get("Content-Type")).toBe("application/json");
+    expect((init?.headers as Headers).get(SESSION_HEADER)).toBe("stale-token");
+    expect(JSON.parse(init?.body as string)).toEqual({ consent: true, target_id: "chosen", project_url: project });
+  });
+
   it("sends only Flow consent and the explicitly selected target", async () => {
     const fetchMock = jsonFetchMock({ state: "listed", targets: [] });
     vi.stubGlobal("fetch", fetchMock);

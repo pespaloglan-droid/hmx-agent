@@ -138,7 +138,7 @@ export default function FlowTabCheck() {
       <p className="text-sm text-muted-foreground">{text.scope}</p>
     </CardContent></Card>
       {observed && consent && selected && !busy && <FlowImageDraft key={selected}
-        targetLabel={targets.find((tab) => tab.id === selected)?.label || text.tab} />}
+        targetId={selected} targetLabel={targets.find((tab) => tab.id === selected)?.label || text.tab} />}
     </div>
   );
 }

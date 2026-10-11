@@ -5,7 +5,7 @@ import {
 } from "@hermes/shared";
 
 import type { AuxiliaryModelsResponse } from "./api-aux";
-import type { BrowserConfigurationStatus, BrowserConnectionProbe, BrowserFlowResult, BrowserInventory } from "./api-browser";
+import type { BrowserConfigurationStatus, BrowserConnectionProbe, BrowserFlowResult, FlowProjectResult, BrowserInventory } from "./api-browser";
 import type {
   ManagedFileReadResponse,
   ManagedFilesResponse,
@@ -418,6 +418,11 @@ export const api = {
     fetchJSON<BrowserFlowResult>("/api/browser/flow/tabs", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ consent: true }),
+    }),
+  checkFlowProject: (targetId: string, projectUrl: string) =>
+    fetchJSON<FlowProjectResult>("/api/browser/flow/project", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ consent: true, target_id: targetId, project_url: projectUrl }),
     }),
   checkFlowTab: (targetId: string) =>
     fetchJSON<BrowserFlowResult>("/api/browser/flow/check", {
