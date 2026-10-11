@@ -37,6 +37,9 @@ Selecting either must not silently authorize the other.
 
 ## Next acceptance gates
 
+Connection review, implementation boundaries and the follow-up acceptance matrix:
+[test-before-connection preparation](browser-connection-preflight.md).
+
 1. Decide and verify a supported, explicitly approved browser connection method
    without copying personal profile data or bypassing Google sign-in protections.
 2. Verify a single profile against `https://flow.google.com/`. A configured address
