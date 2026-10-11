@@ -74,6 +74,11 @@ export const en: Translations = {
       stopped: "Stopped",
     },
     nav: {
+      channels: "Channels",
+      files: "Files",
+      pairing: "Pairing",
+      system: "System",
+      webhooks: "Webhooks",
       browser: "Browser",
       analytics: "Analytics",
       chat: "Chat",

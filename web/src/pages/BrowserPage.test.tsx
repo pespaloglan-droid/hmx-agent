@@ -153,6 +153,26 @@ describe("Browser panel", () => {
     expect(container.textContent).not.toContain("SECRET");
   });
 
+  it("localizes directory labels without renaming the recorded profile", async () => {
+    mocks.discoverBrowserProfiles.mockResolvedValue({
+      ...inventory, browsers: [{
+        ...inventory.browsers[0],
+        profiles: inventory.browsers[0].profiles.map((row) => ({
+          ...row, label: "Пользователь",
+        })),
+      }],
+    });
+    await render();
+    await click(container.querySelector('input[name="metadata-consent"]')!);
+    await click(discoverButton());
+    expect(container.textContent).toContain("Varsayılan profil");
+    expect(container.textContent).toContain("Profil 1");
+    expect(container.textContent).toContain("Пользователь");
+    expect(container.querySelector('[title="Default"]')?.textContent).toBe("Varsayılan profil");
+    await click(container.querySelector('input[name="browser-profile"]')!);
+    expect(container.querySelector("output")?.textContent).toBe("1");
+  });
+
   it("reports discovery failures and permits retry", async () => {
     mocks.discoverBrowserProfiles.mockRejectedValueOnce(new Error("SECRET"));
     await render();

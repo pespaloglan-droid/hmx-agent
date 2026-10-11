@@ -22,6 +22,7 @@ const copy = {
     emailConsent: "Yerel profil bilgisinde kayıtlı e-posta adreslerinin de okunmasına ve gösterilmesine izin veriyorum.",
     emailNote: "E-posta yalnızca tarayıcının yerel kaydından alınır; eski olabilir ve Flow oturumunu kanıtlamaz. Parola veya çerez okunmaz.",
     emailMissing: "Yerel kayıtta e-posta bulunamadı",
+    defaultProfile: "Varsayılan profil", profileNumber: "Profil {number}",
     discover: "Profilleri keşfet", discovering: "Keşfediliyor…",
     discoveryError: "Profil keşfi tamamlanamadı. İzinleri kontrol edip yeniden deneyin.",
     initial: "Profil listesi henüz okunmadı. Keşif için yukarıdaki izni verin.",
@@ -51,6 +52,7 @@ const copy = {
     emailConsent: "Also allow reading and displaying email addresses recorded in local profile metadata.",
     emailNote: "Emails come only from the browser's local record, may be stale, and do not prove a Flow session. Passwords and cookies are not read.",
     emailMissing: "No email found in local metadata",
+    defaultProfile: "Default profile", profileNumber: "Profile {number}",
     discover: "Discover profiles", discovering: "Discovering…",
     discoveryError: "Profile discovery failed. Check permissions and retry.",
     initial: "Profiles have not been read. Give consent above to discover them.",
@@ -128,6 +130,12 @@ function BrowserPanel({ profile }: { profile: string }) {
       case "profile_limit": return text.limit;
       default: return text.failed;
     }
+  }
+
+  function directoryLabel(directory: string) {
+    if (directory === "Default") return text.defaultProfile;
+    const match = /^Profile ([0-9]+)$/.exec(directory);
+    return match ? text.profileNumber.replace("{number}", match[1]) : directory;
   }
 
   return (
@@ -226,7 +234,7 @@ function BrowserPanel({ profile }: { profile: string }) {
                         }} />
                       <span className="min-w-0 space-y-1">
                         <span className="block break-words font-medium">{row.label}</span>
-                        <span className="block text-sm text-muted-foreground">{row.directory}</span>
+                        <span title={row.directory} className="block text-sm text-muted-foreground">{directoryLabel(row.directory)}</span>
                         {emailConsent && inventory.emails_included && (
                           <span translate="no" className="block break-all text-sm">
                             {row.email || text.emailMissing}
