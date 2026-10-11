@@ -189,3 +189,53 @@ def test_project_check_requires_auth_consent_and_only_fixed_fields(client, monke
     assert response.status_code == 200
     assert calls == [(body["target_id"], body["project_url"])]
     assert response.json()["production_authorized"] is False
+
+
+def test_stage_requires_separate_write_consent_and_scoped_profile(client, monkeypatch, tmp_path):
+    import uuid
+    scopes = []; calls = []
+    async def scoped(profile, fn): scopes.append(profile); return fn()
+    async def stage(store, ident, target, project, items):
+        calls.append((store.path, ident, target, items))
+        return {"state": "text_staged", "production_submitted": False}
+    monkeypatch.setattr(browser, "config_scoped_to_thread", scoped)
+    monkeypatch.setattr(browser, "destructive_profile", lambda profile, route: profile)
+    monkeypatch.setattr(browser, "get_hermes_home", lambda: tmp_path)
+    monkeypatch.setattr(browser, "stage_flow_text", stage)
+    body = {"consent": True, "fill_consent": True, "stage_id": str(uuid.uuid4()), "target_id": "chosen",
+            "project_url": "https://flow.google.com/project/11111111-2222-3333-4444-555555555555",
+            "items": [{"name": "hmx_test_x", "prompt": "prompt"}]}
+    assert client.post("/api/browser/flow/stage", json=body).status_code == 401
+    assert client.post("/api/browser/flow/stage", headers=HEADERS, json={**body, "fill_consent": False}).status_code == 400
+    assert client.post("/api/browser/flow/stage", headers=HEADERS, json={**body, "fill_consent": "true"}).status_code == 422
+    assert client.post("/api/browser/flow/stage", headers=HEADERS, json={**body, "expression": "BAD"}).status_code == 422
+    assert client.post("/api/browser/flow/stage", headers=HEADERS, json={**body, "items": body["items"] * 3}).status_code == 422
+    assert not calls and not scopes
+    response = client.post("/api/browser/flow/stage?profile=worker", headers=HEADERS, json=body)
+    assert response.json()["production_submitted"] is False
+    assert scopes == ["worker"]
+    assert calls[0][0] == tmp_path / "hmx-flow-stages.sqlite3"
+
+
+def test_stage_status_requires_auth_and_does_not_connect(client, monkeypatch, tmp_path):
+    import uuid
+    async def scoped(profile, fn): return fn()
+    monkeypatch.setattr(browser, "config_scoped_to_thread", scoped)
+    monkeypatch.setattr(browser, "destructive_profile", lambda profile, route: profile)
+    monkeypatch.setattr(browser, "get_hermes_home", lambda: tmp_path)
+    ident = str(uuid.uuid4())
+    assert client.get(f"/api/browser/flow/stage/{ident}").status_code == 401
+    assert client.get("/api/browser/flow/stage/not-uuid", headers=HEADERS).status_code == 400
+    assert client.get(f"/api/browser/flow/stage/{ident}?profile=worker", headers=HEADERS).json()["state"] == "not_found"
+
+
+def test_stage_validation_never_echoes_private_prompt(client):
+    import uuid
+    body = {"consent": True, "fill_consent": True, "stage_id": str(uuid.uuid4()), "target_id": "chosen",
+            "project_url": "https://flow.google.com/project/11111111-2222-3333-4444-555555555555",
+            "items": [{"name": "hmx_test_x", "prompt": "PRIVATE_PROMPT" * 300}]}
+    response = client.post("/api/browser/flow/stage", headers=HEADERS, json=body)
+    assert response.status_code == 422
+    assert "PRIVATE_PROMPT" not in response.text
+    response = client.post("/api/browser/flow/stage", headers={**HEADERS, "Content-Type": "application/json"}, content='{"PRIVATE_PROMPT":')
+    assert response.status_code == 422 and "PRIVATE_PROMPT" not in response.text

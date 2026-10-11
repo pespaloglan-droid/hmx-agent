@@ -61,3 +61,13 @@ export interface FlowProjectResult {
   account_verified?: false;
   production_authorized?: false;
 }
+
+
+export interface FlowStageResult {
+  state: BrowserConnectionProbe["state"] | "invalid_request" | "target_unavailable" | "project_mismatch"
+    | "composer_blocked" | "composer_not_empty" | "text_staged" | "stage_uncertain" | "attempt_exists";
+  stage_id?: string;
+  production_submitted: false;
+  send_enabled?: boolean;
+  checked_at?: string;
+}

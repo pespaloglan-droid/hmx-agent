@@ -3,15 +3,17 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field, StrictBool
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from hermes_cli.browser_inventory import browser_configuration_status, discover_browsers
 from hermes_cli.browser_connection_probe import run_browser_probe
 from hermes_cli.browser_flow_check import check_flow_tab, list_flow_tabs
 from hermes_cli.browser_flow_project import check_flow_project
+from hermes_cli.browser_flow_stage import StageStore, stage_flow_text
+from hermes_constants import get_hermes_home
 from hermes_cli.web_deps import late
-from hermes_cli.web_routers._common import config_scoped_to_thread
+from hermes_cli.web_routers._common import config_scoped_to_thread, destructive_profile
 
 router = APIRouter()
 _require_token = late("_require_token")
@@ -35,6 +37,50 @@ class FlowTargetConsent(ProbeConsent):
 
 class FlowProjectConsent(FlowTargetConsent):
     project_url: str = Field(min_length=1, max_length=512)
+
+
+class StageItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=80)
+    prompt: str = Field(min_length=1, max_length=3000)
+
+
+class FlowStageRequest(FlowProjectConsent):
+    stage_id: str = Field(min_length=36, max_length=36)
+    items: list[StageItem] = Field(min_length=1, max_length=2)
+    fill_consent: StrictBool = False
+
+
+@router.post("/api/browser/flow/stage")
+async def browser_flow_stage(request: Request, profile: Optional[str] = None):
+    _require_token(request)
+    # Safe validation errors: never echo submitted prompt text into API error logs.
+    raw = await request.body()
+    if len(raw) > 65536 or request.headers.get("content-type", "").split(";", 1)[0] != "application/json":
+        raise HTTPException(status_code=422, detail="Invalid composer staging request")
+    try:
+        body = FlowStageRequest.model_validate_json(raw)
+    except ValidationError:
+        raise HTTPException(status_code=422, detail="Invalid composer staging request")
+    if body.consent is not True or body.fill_consent is not True:
+        raise HTTPException(status_code=400, detail="Separate composer-write consent is required")
+    profile = destructive_profile(profile, "Flow composer staging")
+    path = await config_scoped_to_thread(profile, lambda: get_hermes_home() / "hmx-flow-stages.sqlite3")
+    return await stage_flow_text(StageStore(path), body.stage_id, body.target_id, body.project_url,
+                                 [item.model_dump() for item in body.items])
+
+
+@router.get("/api/browser/flow/stage/{stage_id}")
+async def browser_flow_stage_status(request: Request, stage_id: str, profile: Optional[str] = None):
+    _require_token(request)
+    from uuid import UUID
+    try:
+        if str(UUID(stage_id)) != stage_id:
+            raise ValueError
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid stage ID")
+    profile = destructive_profile(profile, "Flow composer stage status")
+    return await config_scoped_to_thread(profile, lambda: StageStore(get_hermes_home() / "hmx-flow-stages.sqlite3").status(stage_id))
 
 
 @router.post("/api/browser/flow/project")

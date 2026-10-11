@@ -229,3 +229,64 @@ It verified no private values returned and no submission. Desktop/mobile fixture
 verified independent consent, explicit request, exact target/project payload,
 marker display and no horizontal overflow. The real Windows composer shape is
 not yet verified; the user's next preflight result supplies that evidence.
+
+## Explicit composer staging test (writes text, never submits)
+
+The user verified the real Windows project/composer preflight: one empty
+contenteditable, zero textareas, one send control, Agent label visible, no stop
+control. Send was disabled while empty. This does not prove account identity,
+Agent selection, model/cost settings or production automation.
+
+The next separate write-consent control accepts at most two named rows, each
+prompt at most 3000 characters. Names must begin `hmx_test_` so the first test can
+use new names such as `hmx_test_003_sahil` and `hmx_test_004_orman`. The backend
+validates these constraints independently of the client. It constructs fixed
+image-only instructions with the rows as escaped JSON data; the requested count
+is **not a hard enforcement of how many outputs Flow Agent might generate if a
+user later submits it**. This stage never submits those instructions.
+
+- Authenticated `POST /api/browser/flow/stage` requires BOTH normal consent and
+  explicit `fill_consent:true`. Unknown fields, malformed JSON and schema errors
+  return safe fixed errors without echoing prompt contents. A bounded request
+  names an idempotency UUID, selected target, exact project and one/two rows.
+- The owning Hermes profile is explicit in the client request and resolved under
+  the backend's profile/secret scope before an await. A profile-local SQLite
+  attempt record is committed BEFORE opening Chrome. It records only target,
+  project, SHA-256 message digest, count, status and timestamps — not prompt text.
+  Both same-ID replay and the same project/text under a new ID are fenced.
+- Fresh target metadata and side-effect-guarded preflight precede the write. A
+  fixed synchronous expression checks the exact origin/project, one empty
+  contenteditable, Agent label, idle controls and unique send control. It focuses
+  that editor and rechecks target/emptiness before native `execCommand('insertText')`.
+  This effectful call requires write consent; it is not a broader-permission
+  retry of a failed read. Textareas, ambiguous controls and existing user text
+  are refused. No click, Enter, keyboard shortcut, navigation, account change,
+  production, download or profile copying occurs.
+- The inserted text is compared locally with the approved message; a subsequent
+  guarded read reports whether the send control became enabled. Raw editor text
+  is not returned. Focus/navigation races, exceptions and unknown outcomes are
+  blocked/uncertain, never automatically rewritten.
+- Authenticated, profile-scoped `GET /api/browser/flow/stage/<UUID>` only reads
+  the durable status. The UI may use this after a failed response; it never
+  retries the mutation. An interrupted attempt survives restart as uncertain.
+  Leaving/reloading the panel does not cancel an already-started write.
+
+Windows acceptance: keep the test project open, Agent idle and composer empty.
+Edit the local two-row draft to use NEW `hmx_test_…` names. Run draft/project
+checks, grant separate write consent, press **Test metnini yerleştir (gönderme)**
+once and approve only the corresponding Chrome request. Expected: staged text,
+no production, and a reported send-control state. Show the Flow composer and
+result, but **do not click send manually**. On error/uncertainty, inspect and share
+instead of retrying. Separate production permission, bounded one-shot dispatch,
+asset reconciliation/download and Chat integration are not implemented yet.
+
+Validation: 508 web tests, 110 targeted Python tests (isolated Python 3.13),
+TypeScript, changed-file lint and build passed. Native local Chromium exercised
+contenteditable insertion and the input event, send enabling, escaped special
+text, preservation of existing text, wrong origin/project and focus navigation
+refusal; submit click count remained zero. Synthetic CDP tests enforce read →
+write → guarded read → detach and prohibit other commands. SQLite tests cover
+concurrent claims, restart fencing, profile isolation and no prompt persistence.
+Desktop/mobile mocked UI fixtures cover independent write consent, one request,
+status-only recovery, disabled repeat action and no horizontal overflow. Actual
+Windows text insertion and Flow's React/editor behavior remain pending acceptance.

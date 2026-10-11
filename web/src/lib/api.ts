@@ -5,7 +5,7 @@ import {
 } from "@hermes/shared";
 
 import type { AuxiliaryModelsResponse } from "./api-aux";
-import type { BrowserConfigurationStatus, BrowserConnectionProbe, BrowserFlowResult, FlowProjectResult, BrowserInventory } from "./api-browser";
+import type { BrowserConfigurationStatus, BrowserConnectionProbe, BrowserFlowResult, FlowProjectResult, FlowStageResult, BrowserInventory } from "./api-browser";
 import type {
   ManagedFileReadResponse,
   ManagedFilesResponse,
@@ -144,6 +144,7 @@ const PROFILE_SCOPED_PREFIXES = [
   // The shared-metrics answer is one per profile (telemetry.shared_metrics in its config.yaml).
   "/api/shared-metrics",
   "/api/browser/status",
+  "/api/browser/flow/stage",
 ];
 
 // The dashboard's own profile when nothing else named one. The backend injects it only
@@ -419,6 +420,14 @@ export const api = {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ consent: true }),
     }),
+  stageFlowText: (stageId: string, targetId: string, projectUrl: string, items: { name: string; prompt: string }[]) =>
+    fetchJSON<FlowStageResult>(appendProfileParam("/api/browser/flow/stage", getManagementProfile()), {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ consent: true, fill_consent: true, stage_id: stageId,
+        target_id: targetId, project_url: projectUrl, items }),
+    }),
+  getFlowStageStatus: (stageId: string) =>
+    fetchJSON<FlowStageResult>(appendProfileParam(`/api/browser/flow/stage/${encodeURIComponent(stageId)}`, getManagementProfile())),
   checkFlowProject: (targetId: string, projectUrl: string) =>
     fetchJSON<FlowProjectResult>("/api/browser/flow/project", {
       method: "POST", headers: { "Content-Type": "application/json" },

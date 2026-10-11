@@ -3,7 +3,9 @@ import { Button } from "@nous-research/ui/ui/components/button";
 import { api } from "@/lib/api";
 import type { FlowProjectResult } from "@/lib/api-browser";
 import { useI18n } from "@/i18n";
-interface Props { targetId: string; projectUrl: string }
+import FlowStageText from "./FlowStageText";
+import type { ImageDraftItem } from "@/lib/flow-image-draft";
+interface Props { targetId: string; projectUrl: string; items?: ImageDraftItem[] }
 const copy = {
   tr: {
     title: "Proje ve Agent alanı kontrolü — salt okunur", consent: "Seçili sekmenin bu projede olduğunu ve Agent yazı alanının durumunu okumaya izin veriyorum.",
@@ -20,7 +22,7 @@ const copy = {
     yes: "Yes", no: "No", checked: "Checked at", fields: { page_ready: "Page ready", composer_empty: "Single composer empty", agent_mode_visible: "Agent label observed", stop_button_visible: "Stop control observed", send_enabled: "Send control enabled", textarea_count: "Textarea count", contenteditable_count: "Contenteditable count", send_button_count: "Send control count" },
   },
 };
-export default function FlowProjectPreflight({ targetId, projectUrl }: Props) {
+export default function FlowProjectPreflight({ targetId, projectUrl, items }: Props) {
   const { locale } = useI18n(); const text = copy[locale === "tr" ? "tr" : "en"];
   const [consent, setConsent] = useState(false); const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<FlowProjectResult | null>(null); const [failed, setFailed] = useState(false);
@@ -34,7 +36,7 @@ export default function FlowProjectPreflight({ targetId, projectUrl }: Props) {
     finally { pending.current = false; if (mounted.current) setBusy(false); }
   }
   const message = !result ? null : result.state === "project_ready" ? text.ready : result.state === "project_inconclusive" ? text.inconclusive : result.state === "project_mismatch" || result.state === "target_unavailable" ? text.mismatch : text.error;
-  return <section className="space-y-3 rounded border border-border p-3" translate="no">
+  return <div className="space-y-3"><section className="space-y-3 rounded border border-border p-3" translate="no">
     <h4 className="font-semibold">{text.title}</h4><p className="text-sm text-muted-foreground">{text.note}</p>
     <label className="flex items-start gap-3"><input type="checkbox" name="flow-project-consent" checked={consent} disabled={busy} className="mt-1 shrink-0"
       onChange={(event) => { setConsent(event.target.checked); setResult(null); setFailed(false); }} /><span>{text.consent}</span></label>
@@ -44,5 +46,8 @@ export default function FlowProjectPreflight({ targetId, projectUrl }: Props) {
       <dt className="text-sm text-muted-foreground">{text.fields[key as keyof typeof text.fields]}</dt><dd>{typeof value === "boolean" ? value ? text.yes : text.no : value}</dd>
     </div>)}</dl>}
     {result?.checked_at && <p className="text-sm">{text.checked}: {new Date(result.checked_at).toLocaleString(locale === "tr" ? "tr-TR" : "en-US")}</p>}
-  </section>;
+  </section>
+    {consent && !busy && result?.state === "project_ready" && result.markers?.contenteditable_count === 1 && items &&
+      <FlowStageText targetId={targetId} projectUrl={projectUrl} items={items} />}
+  </div>;
 }

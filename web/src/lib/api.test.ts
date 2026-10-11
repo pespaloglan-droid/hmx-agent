@@ -55,6 +55,23 @@ function jsonFetchMock(body: unknown = { ok: true }) {
 }
 
 describe("fetchJSON", () => {
+  it("binds composer staging and durable status to the selected Hermes profile", async () => {
+    setManagementProfile("worker");
+    const fetchMock = jsonFetchMock({ state: "text_staged", production_submitted: false });
+    vi.stubGlobal("fetch", fetchMock);
+    const items = [{ name: "hmx_test_x", prompt: "Fixture" }];
+    const id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    await api.stageFlowText(id, "chosen", "https://flow.google.com/project/11111111-2222-3333-4444-555555555555", items);
+    await api.getFlowStageStatus(id);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/flow/stage?profile=worker");
+    expect((init?.headers as Headers).get("Content-Type")).toBe("application/json");
+    expect((init?.headers as Headers).get(SESSION_HEADER)).toBe("stale-token");
+    expect(JSON.parse(init?.body as string)).toEqual({ consent: true, fill_consent: true,
+      stage_id: id, target_id: "chosen", project_url: "https://flow.google.com/project/11111111-2222-3333-4444-555555555555", items });
+    expect(fetchMock.mock.calls[1][0]).toBe(`/api/browser/flow/stage/${id}?profile=worker`);
+  });
+
   it("sends only explicit project preflight consent, selected target and project with auth", async () => {
     const fetchMock = jsonFetchMock({ state: "project_ready", production_authorized: false });
     vi.stubGlobal("fetch", fetchMock);

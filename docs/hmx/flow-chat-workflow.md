@@ -37,11 +37,13 @@ This is the requested end state, **not a supported command in the current build*
 ## Current implemented boundaries
 
 Profile/email metadata discovery, one-shot Chrome transport check, selected
-Flow-tab markers, local-only batch draft and exact-project/composer preflight are
-implemented. The user validated Windows transport, Flow workspace markers and
+Flow-tab markers, local-only batch draft, exact-project/composer preflight and separately consented
+composer text staging (no submit) are implemented. The user validated Windows transport, Flow workspace markers and
 the two-row local draft. The user manually produced, named and downloaded two
-images through Flow Agent; this was not Hermes automation. Project/composer
-preflight has local fixture coverage and awaits live Windows acceptance.
+images through Flow Agent; this was not Hermes automation. The user also verified the Windows project/composer preflight: one empty
+contenteditable and a unique send control. Text staging has local fixture coverage
+and awaits live Windows acceptance. It stores a profile-scoped durable attempt
+fence without persisting prompts, but is not a generation job tracker.
 
 Production authorization/enforcement, effectful dispatch, account/profile
 mapping, durable job tracking, asset reconciliation, automated download and Chat

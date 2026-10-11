@@ -24,6 +24,17 @@ describe("explicit project preflight", () => {
     expect(container.textContent).toContain("Kontrol sonucu üretim izni değildir");
     await click(container.querySelector("input")!); expect(container.textContent).not.toContain("Proje eşleşti; tek boş Agent");
   });
+  it("reveals a separate write permission only after a confirmed contenteditable preflight", async () => {
+    await act(async () => root.render(<FlowProjectPreflight targetId="chosen" projectUrl={url}
+      items={[{ name: "hmx_test_x", prompt: "Fixture" }]} />));
+    expect(container.querySelector('[name="flow-stage-consent"]')).toBeNull();
+    mocks.checkFlowProject.mockResolvedValue({ state: "project_ready", markers: { contenteditable_count: 1 } });
+    await click(container.querySelector('[name="flow-project-consent"]')!); await click(container.querySelector("button")!);
+    expect(container.querySelector<HTMLInputElement>('[name="flow-stage-consent"]')?.checked).toBe(false);
+    await click(container.querySelector('[name="flow-project-consent"]')!);
+    expect(container.querySelector('[name="flow-stage-consent"]')).toBeNull();
+  });
+
   it.each(["project_inconclusive", "project_mismatch", "target_unavailable", "read_blocked", "timeout"])("shows %s without another request or production claim", async (state) => {
     mocks.checkFlowProject.mockResolvedValue({ state }); await click(container.querySelector("input")!); await click(container.querySelector("button")!);
     expect(container.querySelector('[role="alert"]')).not.toBeNull(); expect(mocks.checkFlowProject).toHaveBeenCalledTimes(1);
