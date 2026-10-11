@@ -4,6 +4,7 @@ import { Card, CardContent } from "@nous-research/ui/ui/components/card";
 import { api } from "@/lib/api";
 import type { BrowserFlowResult } from "@/lib/api-browser";
 import { useI18n } from "@/i18n";
+import FlowImageDraft from "./FlowImageDraft";
 
 const copy = {
   tr: {
@@ -98,7 +99,7 @@ export default function FlowTabCheck() {
   }
   const observed = result && ["workspace_visible", "login_prompt", "inconclusive"].includes(result.state);
   return (
-    <Card translate="no"><CardContent className="space-y-3 p-5">
+    <div className="space-y-4"><Card translate="no"><CardContent className="space-y-3 p-5">
       <h2 className="text-lg font-semibold">{text.title}</h2>
       <p className="text-sm text-muted-foreground">{text.note}</p>
       <p className="text-sm text-muted-foreground">{text.privacy}</p>
@@ -136,5 +137,8 @@ export default function FlowTabCheck() {
       </div>
       <p className="text-sm text-muted-foreground">{text.scope}</p>
     </CardContent></Card>
+      {observed && consent && selected && !busy && <FlowImageDraft key={selected}
+        targetLabel={targets.find((tab) => tab.id === selected)?.label || text.tab} />}
+    </div>
   );
 }

@@ -58,9 +58,11 @@ describe("Flow target selection", () => {
     await click(button("Seçili Flow sekmesini kontrol et"));
     expect(mocks.checkFlowTab).toHaveBeenCalledWith("flow-2");
     expect(container.textContent).toContain("Flow çalışma alanı işaretleri görüldü");
+    expect(container.textContent).toContain("Görsel üretim taslağı — gönderim yok");
     expect(container.textContent).toContain("Gmail adresini veya Chrome profil kimliğini doğrulamaz");
     await click(container.querySelector('input[name="flow-consent"]')!);
     expect(container.querySelectorAll('input[name="flow-target"]')).toHaveLength(0);
+    expect(container.textContent).not.toContain("Görsel üretim taslağı — gönderim yok");
     expect(container.textContent).not.toContain("Flow çalışma alanı işaretleri görüldü");
   });
 

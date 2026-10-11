@@ -191,3 +191,35 @@ overflow. These are local fixtures, not a real Windows Flow/account test.
 
 Actual Windows Flow marker-check acceptance, profile identity mapping, parallel
 sessions, live view and production remain pending. Main is not merged.
+
+
+### Local image-production draft (no dispatch)
+
+The user's manual two-image Flow Agent test produced a downloaded project ZIP
+containing two JPGs with `001_sahil_…` and `002_orman_…` filename prefixes; the
+screenshot shows an export suffix, not exact filename equality. This verifies
+only that manual workflow. Flow did not show the expected separate generation
+approval, so its setting cannot be treated as our spending-authorization boundary.
+
+After an explicitly selected tab returns readable Flow markers (including an
+inconclusive session result), the dashboard now exposes a **local-only** image
+draft. It accepts an exact Flow project URL as an unverified draft reference and
+up to 100 `name | prompt` rows. It previews groups of at most ten, one planned
+image per prompt, and target names. No execution endpoint or production button
+exists: draft checking does not send prompts, change Flow settings or grant
+spending permission. Project/tab matching and model/cost validation remain
+unimplemented. Drafts are not persisted and clear on refresh, target/consent
+change or a fresh read-only check. Editing either input clears the preview.
+
+Names use safe ASCII stems with Windows reserved names, separators/extensions
+and case-insensitive collisions rejected. Empty/oversized prompts, oversized
+lists and more than 100 entries block the complete preview rather than silently
+truncating a batch. A JPG filename preview is a target, not proof of export type.
+Automatic production, result matching, job resume and post-download renaming
+remain pending; do not use this client-only validation as execution authority.
+
+Validation: **490 web tests / 66 files**, TypeScript, changed-file ESLint and
+production build passed. Local Chromium fixtures verify target-bound display,
+2-image/1-group preview, no extra API calls on draft preparation, clearing on
+consent loss, desktop/mobile layout and no horizontal overflow. These fixtures
+are not a Windows production automation test. Backend/CLI code is unchanged.
