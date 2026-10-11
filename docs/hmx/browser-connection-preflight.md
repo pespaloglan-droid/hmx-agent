@@ -311,7 +311,7 @@ record cannot dispatch. Fresh target metadata must match the recorded target and
 project; missing targets never fall back to another tab. A guarded read checks:
 exact origin/project, no query/hash, loaded page, one visible contenteditable
 holding the exact normalized approved message, idle controls, one enabled send
-control and **one visible enabled `flow-agent-mode-toggle-chip button.agent-mode-chip`
+control and **one visible enabled `button.agent-mode-chip`
 with `aria-pressed="true"`**. Labels, colors and hashed Angular classes cannot
 prove selected Agent mode.
 
@@ -351,3 +351,29 @@ no rewrite. Mocked desktop/mobile UI validates existing-record resume, independe
 permissions, no automatic submission/replay and no horizontal overflow. No real
 Flow request was submitted by these tests. The changed-code health ratchet against the previous head passes using an
 isolated pinned ruff 0.15.10 tool; no Hermes runtime environment was modified.
+
+### Agent button selector correction
+
+The live Windows inspection confirmed a selected `button.agent-mode-chip` with
+`aria-pressed="true"`, while the test returned `agent_not_selected`. The former
+selector additionally required an assumed custom parent tag. That unverified
+parent dependency has been removed; the observed button class and explicit
+pressed state remain mandatory. One visible enabled candidate is still required:
+missing/ambiguous, disabled, absent pressed state and `aria-pressed="false"` all
+block sending. This does not click or automatically enable Agent mode.
+
+A native local fixture with the observed button under an ordinary wrapper failed
+on the old expression (selected button incorrectly rejected, zero clicks) and
+passes on the corrected expression. The fixture also checks inactive/unknown/
+disabled/ambiguous/missing candidates, hidden duplicates, changed text, zero
+clicks in blocked cases and exactly one approved click. The optional committed
+DOM test needs Node Playwright and Chromium; dependency-unavailable environments
+skip it explicitly. The same fixture was exercised separately with the existing
+local Playwright installation. This proves the selector regression in a local
+fixture, not yet live Windows dispatch acceptance.
+
+No staged text or ledger entry is rewritten. Resume the existing stage UUID and
+identical rows. If the durable state is not `text_staged`, do not create a new UUID
+to bypass a fence. Only explicit renewed production consent can trigger another
+submission request, and the durable compare-and-swap still permits at most one
+effectful send-control evaluation for a stage.

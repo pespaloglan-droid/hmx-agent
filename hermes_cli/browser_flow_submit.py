@@ -25,7 +25,7 @@ SUBMIT_EXPRESSION = r"""(() => {
   const editors = Array.from(document.querySelectorAll('textarea,[contenteditable="true"]')).filter(el=>visible(el) && enabled(el) && !el.readOnly);
   if (editors.length !== 1 || editors[0].tagName === 'TEXTAREA') return {state:'composer_blocked'};
   if ((editors[0].innerText || '').replace(/\r\n/g,'\n').trim() !== APPROVED_MESSAGE) return {state:'text_mismatch'};
-  const agents = Array.from(document.querySelectorAll('flow-agent-mode-toggle-chip button.agent-mode-chip')).filter(visible);
+  const agents = Array.from(document.querySelectorAll('button.agent-mode-chip')).filter(visible);
   if (agents.length !== 1 || !enabled(agents[0]) || agents[0].getAttribute('aria-pressed') !== 'true') return {state:'agent_not_selected'};
   const buttons = Array.from(document.querySelectorAll('button,[role="button"]')).filter(visible);
   const label = el => (el.innerText || '').replace(/\s+/g,' ').trim();
