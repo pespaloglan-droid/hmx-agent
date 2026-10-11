@@ -3,7 +3,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, StrictBool
 from starlette.concurrency import run_in_threadpool
 
 from hermes_cli.browser_inventory import browser_configuration_status, discover_browsers
@@ -18,6 +18,7 @@ load_config = late("load_config", "hermes_cli.config")
 class DiscoveryConsent(BaseModel):
     model_config = ConfigDict(extra="forbid")
     consent: bool = False
+    include_emails: StrictBool = False
 
 
 @router.get("/api/browser/status")
@@ -34,4 +35,4 @@ async def browser_discover(request: Request, body: DiscoveryConsent):
         raise HTTPException(status_code=400, detail="Browser metadata discovery requires consent")
     # OS browser profiles belong to the server's user, not Hermes agent profiles.
     # No caller-controlled path, no network probe and no browser launch.
-    return await run_in_threadpool(discover_browsers)
+    return await run_in_threadpool(discover_browsers, include_emails=body.include_emails)

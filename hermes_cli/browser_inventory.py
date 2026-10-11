@@ -1,8 +1,9 @@
 """Read-only browser metadata inventory. Never launch, copy, or attach a browser.
 
 Discovery is explicitly requested by the dashboard user. Only the profile
-directory names and display names in Local State are exposed; account names,
-cookies, passwords, encryption keys and full filesystem paths are not returned.
+directory names and display names in Local State are exposed by default. A
+separate opt-in may expose the recorded account email, not account credentials.
+Cookies, passwords, encryption keys and full filesystem paths are never returned.
 """
 
 from __future__ import annotations
@@ -33,7 +34,17 @@ def _label(value: object, fallback: str) -> str:
     return text[:100] or fallback
 
 
-def inspect_profiles(root: Path) -> tuple[list[dict], str | None]:
+def _email(value: object) -> str | None:
+    """Return only a plausible recorded email; never infer it from the label."""
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    if len(value) > 254 or not value.isprintable():
+        return None
+    return value if re.fullmatch(r"[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+", value) else None
+
+
+def inspect_profiles(root: Path, *, include_emails: bool = False) -> tuple[list[dict], str | None]:
     """Inspect one fixed browser data root, without reading profile contents."""
     try:
         if not _safe_directory(root):
@@ -67,6 +78,8 @@ def inspect_profiles(root: Path) -> tuple[list[dict], str | None]:
             name = entry.get("name") if isinstance(entry, dict) else None
             rows.append({"directory": child.name, "label": _label(name, child.name),
                          "connection_state": "not_connected", "site_session": "not_checked"})
+            if include_emails:
+                rows[-1]["email"] = _email(entry.get("user_name")) if isinstance(entry, dict) else None
             if len(rows) >= MAX_PROFILES:
                 warning = "profile_limit"
                 break
@@ -77,14 +90,15 @@ def inspect_profiles(root: Path) -> tuple[list[dict], str | None]:
         return [], "discovery_failed"
 
 
-def discover_browsers() -> dict:
+def discover_browsers(*, include_emails: bool = False) -> dict:
     from hermes_cli.browser_connect import chromium_executable, real_profile_data_dir
 
     browsers = []
     for key, label in BROWSERS:
         try:
             root = real_profile_data_dir(key)
-            profiles, warning = inspect_profiles(Path(root)) if root else ([], "unsupported_platform")
+            profiles, warning = (inspect_profiles(Path(root), include_emails=include_emails)
+                                 if root else ([], "unsupported_platform"))
             installed = bool(chromium_executable(key))
         except OSError:
             profiles, warning, installed = [], "discovery_failed", False
@@ -92,7 +106,7 @@ def discover_browsers() -> dict:
             "id": key, "label": label, "installed": installed, "warning": warning,
             "profiles": [{"id": f"{key}:{row['directory']}", **row} for row in profiles],
         })
-    return {"browsers": browsers, "read_only": True}
+    return {"browsers": browsers, "read_only": True, "emails_included": include_emails}
 
 
 def browser_configuration_status(config: dict) -> dict:

@@ -13,8 +13,11 @@ Branch: `feat/browser-profile-panel`. The agent loop and chat interface are unch
 - Read-only discovery of standard Chrome, Edge, Brave and Chromium directories
   for the **OS user running the dashboard backend**. A remote dashboard does not
   scan the viewing computer.
-- Profile directory IDs and display names only. Account emails are not returned;
-  display labels containing `@` fall back to directory names.
+- Profile directory IDs and display names by default; display labels containing
+  `@` fall back to directory names. A separate, unchecked email consent option
+  allows only the `user_name` email recorded in Local State to be returned.
+  Missing/invalid values are shown as unavailable, never inferred from a label.
+  Recorded emails may be stale and do not prove a signed-in site session.
 - No reads of Cookies, Login Data or profile Preferences; no browser launch,
   process termination, copying, account login, CDP probing or config mutation.
 - Symlink/junction traversal refusal; bounded Local State metadata reads;
@@ -22,6 +25,11 @@ Branch: `feat/browser-profile-panel`. The agent loop and chat interface are unch
 - Multiple profile selections in screen-local state. They are neither persistent
   settings nor browser-use permission, and start no tasks. Switching Hermes agent
   profile clears consent and selections.
+- A dedicated numeric selection output and translation-excluded panel protect
+  dynamic text from browser auto-translation. Use the dashboard's own language
+  selector for Turkish/English. The selection summary stays visible while scrolling.
+- Email consent changes clear the inventory and selections. Rediscovery is
+  required with the new scope; revocation removes emails from component state.
 - Turkish/English page copy, desktop/mobile layout, loading, retry and empty states.
 
 ## Deliberately not implemented yet
@@ -91,6 +99,30 @@ is not the review/merge process for this fork. Keep `main` unchanged until accep
 
 Do not publish real account lists, profile paths, cookies or API keys in test
 screenshots.
+
+### Email and selection follow-up
+
+Use Ctrl+Shift+R after rebuilding. Disable Chrome's page translation and choose
+Turkish in the dashboard's own language selector if desired. Allow metadata
+discovery; optionally grant the separate email permission, then discover again.
+Only recorded local emails should appear; other profiles show the unavailable
+message. Select four profiles: the counter must show 4, then 3 after deselecting
+one. Removing email consent clears the inventory and count immediately.
+Rediscover with email permission off: no email addresses should appear.
+
+The discovery transport now explicitly sends `Content-Type: application/json`.
+The initial Windows 422 validation error was caused by a missing JSON header, not
+proof of filesystem access denial. After that fix, the user confirmed the real
+Windows profile list appeared. Actual browser attach remains untested.
+
+Follow-up validation: 441 web tests, 21 inventory/router tests, TypeScript,
+changed frontend file lint and production build passed. A local Chromium fixture
+with 65 synthetic profiles verified four selections, deselection to three,
+email opt-in/revocation and no horizontal overflow at 390px. A synthetic external
+text-replacement test reproduces the stale counter with the old mixed-text
+structure and passes with the new protected output. This is not a claim that the
+user's Chrome translator itself was exercised. Real Windows email metadata and
+the revised counter still need the user's acceptance test.
 
 ## Development validation scope
 

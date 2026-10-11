@@ -62,7 +62,7 @@ describe("fetchJSON", () => {
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/browser/discover");
     expect(options?.method).toBe("POST");
-    expect(JSON.parse(options?.body as string)).toEqual({ consent: true });
+    expect(JSON.parse(options?.body as string)).toEqual({ consent: true, include_emails: false });
     expect(new Headers(options?.headers).get("Content-Type")).toBe("application/json");
     expect(new Headers(options?.headers).get(SESSION_HEADER)).toBe("stale-token");
   });
@@ -73,6 +73,14 @@ describe("fetchJSON", () => {
     setManagementProfile("worker");
     await api.getBrowserStatus();
     expect(fetchMock.mock.calls[0][0]).toBe("/api/browser/status?profile=worker");
+  });
+  it("requests email metadata only when explicitly enabled", async () => {
+    const fetchMock = jsonFetchMock();
+    vi.stubGlobal("fetch", fetchMock);
+    await api.discoverBrowserProfiles(true);
+    expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string)).toEqual({
+      consent: true, include_emails: true,
+    });
   });
   it("tries the one-shot reload path for loopback 401s", async () => {
     vi.stubGlobal(

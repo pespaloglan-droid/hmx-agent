@@ -19,6 +19,9 @@ const copy = {
     profiles: "Tarayıcı profilleri",
     privacy: "Yalnızca bu sunucuyu çalıştıran Windows/macOS/Linux kullanıcısının tarayıcı profil adları keşfedilir. Bunlar Hermes ajan profillerinden farklıdır. Parola veya çerez dosyaları okunmaz; profiller kopyalanmaz, tarayıcı açılmaz.",
     consent: "Bu bilgisayardaki tarayıcı profil adlarının okunmasına izin veriyorum.",
+    emailConsent: "Yerel profil bilgisinde kayıtlı e-posta adreslerinin de okunmasına ve gösterilmesine izin veriyorum.",
+    emailNote: "E-posta yalnızca tarayıcının yerel kaydından alınır; eski olabilir ve Flow oturumunu kanıtlamaz. Parola veya çerez okunmaz.",
+    emailMissing: "Yerel kayıtta e-posta bulunamadı",
     discover: "Profilleri keşfet", discovering: "Keşfediliyor…",
     discoveryError: "Profil keşfi tamamlanamadı. İzinleri kontrol edip yeniden deneyin.",
     initial: "Profil listesi henüz okunmadı. Keşif için yukarıdaki izni verin.",
@@ -45,6 +48,9 @@ const copy = {
     profiles: "Browser profiles",
     privacy: "Discovery reads browser profile names for the OS user running this server, not Hermes agent profiles. Password and cookie files are not read; profiles are not copied and no browser is launched.",
     consent: "Allow reading browser profile names on this computer.",
+    emailConsent: "Also allow reading and displaying email addresses recorded in local profile metadata.",
+    emailNote: "Emails come only from the browser's local record, may be stale, and do not prove a Flow session. Passwords and cookies are not read.",
+    emailMissing: "No email found in local metadata",
     discover: "Discover profiles", discovering: "Discovering…",
     discoveryError: "Profile discovery failed. Check permissions and retry.",
     initial: "Profiles have not been read. Give consent above to discover them.",
@@ -75,6 +81,7 @@ function BrowserPanel({ profile }: { profile: string }) {
   const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(0);
   const [consent, setConsent] = useState(false);
+  const [emailConsent, setEmailConsent] = useState(false);
   const [inventory, setInventory] = useState<BrowserInventory | null>(null);
   const [discoveryError, setDiscoveryError] = useState(false);
   const [discovering, setDiscovering] = useState(false);
@@ -103,7 +110,7 @@ function BrowserPanel({ profile }: { profile: string }) {
     setInventory(null);
     setSelected([]);
     try {
-      const data = await api.discoverBrowserProfiles();
+      const data = await api.discoverBrowserProfiles(emailConsent);
       if (generation === discoveryGeneration.current) setInventory(data);
     } catch {
       if (generation === discoveryGeneration.current) setDiscoveryError(true);
@@ -124,7 +131,9 @@ function BrowserPanel({ profile }: { profile: string }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-6">
+    // Browser auto-translation can replace React-owned text nodes, leaving a
+    // detached selection count. Use the dashboard's own Turkish/English copy.
+    <div translate="no" className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-6">
       <header>
         <h1 className="flex items-center gap-2 text-2xl font-bold"><Globe aria-hidden />{text.title}</h1>
         <p className="mt-2 text-muted-foreground">{text.subtitle}</p>
@@ -161,13 +170,27 @@ function BrowserPanel({ profile }: { profile: string }) {
         <h2 id="browser-profiles-heading" className="text-lg font-semibold">{text.profiles}</h2>
         <p className="flex items-start gap-2 text-sm text-muted-foreground"><ShieldCheck className="shrink-0" aria-hidden />{text.privacy}</p>
         <label className="flex cursor-pointer items-start gap-3">
-          <input type="checkbox" checked={consent} disabled={discovering}
+          <input type="checkbox" name="metadata-consent" checked={consent} disabled={discovering}
             onChange={(event) => {
               setConsent(event.target.checked);
-              if (!event.target.checked) { setInventory(null); setSelected([]); }
+              if (!event.target.checked) {
+                setEmailConsent(false); setInventory(null); setSelected([]);
+              }
             }} className="mt-1 size-4 shrink-0" />
           <span>{text.consent}</span>
         </label>
+        <label className="flex cursor-pointer items-start gap-3">
+          <input type="checkbox" name="email-consent" checked={emailConsent}
+            disabled={!consent || discovering}
+            onChange={(event) => {
+              setEmailConsent(event.target.checked);
+              // Re-discover with the new scope; revocation removes email data
+              // from state immediately, not just from its visual presentation.
+              setInventory(null); setSelected([]); setDiscoveryError(false);
+            }} className="mt-1 size-4 shrink-0" />
+          <span>{text.emailConsent}</span>
+        </label>
+        <p className="text-sm text-muted-foreground">{text.emailNote}</p>
         <Button disabled={!consent || discovering} onClick={() => void discover()}>
           {discovering ? text.discovering : text.discover}
         </Button>
@@ -175,6 +198,13 @@ function BrowserPanel({ profile }: { profile: string }) {
           {discovering && <p role="status">{text.discovering}</p>}
           {discoveryError && <p role="alert">{text.discoveryError}</p>}
           {!inventory && !discovering && !discoveryError && <p className="text-muted-foreground">{text.initial}</p>}
+        </div>
+        <div className="sticky top-0 z-10 space-y-1 rounded border border-border bg-background p-3">
+          <p aria-live="polite" className="font-medium">
+            <span>{text.selected}: </span>
+            <output translate="no" aria-label={text.selected}>{selected.length}</output>
+          </p>
+          <p className="text-sm text-muted-foreground">{text.selectionNote}</p>
         </div>
         {inventory && (
           <div className="grid items-start gap-4 md:grid-cols-2">
@@ -187,7 +217,8 @@ function BrowserPanel({ profile }: { profile: string }) {
                   {!browser.profiles.length && <p>{text.empty}</p>}
                   {browser.profiles.map((row) => (
                     <label key={row.id} className="flex cursor-pointer items-start gap-3 rounded border border-border p-3">
-                      <input type="checkbox" className="mt-1 size-4 shrink-0"
+                      <input type="checkbox" name="browser-profile" className="mt-1 size-4 shrink-0"
+                        aria-label={`${row.label} (${row.directory})`}
                         checked={selected.includes(row.id)}
                         onChange={(event) => {
                           const checked = event.target.checked;
@@ -196,6 +227,11 @@ function BrowserPanel({ profile }: { profile: string }) {
                       <span className="min-w-0 space-y-1">
                         <span className="block break-words font-medium">{row.label}</span>
                         <span className="block text-sm text-muted-foreground">{row.directory}</span>
+                        {emailConsent && inventory.emails_included && (
+                          <span translate="no" className="block break-all text-sm">
+                            {row.email || text.emailMissing}
+                          </span>
+                        )}
                         <span className="block text-sm">{text.notConnected} · {text.notChecked}</span>
                       </span>
                     </label>
@@ -205,8 +241,6 @@ function BrowserPanel({ profile }: { profile: string }) {
             ))}
           </div>
         )}
-        <p aria-live="polite" className="font-medium">{text.selected}: {selected.length}</p>
-        <p className="text-sm text-muted-foreground">{text.selectionNote}</p>
       </section>
 
       <div className="grid gap-4 md:grid-cols-2">

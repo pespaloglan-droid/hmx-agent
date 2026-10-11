@@ -417,11 +417,11 @@ export const api = {
   getBrowserStatus: (profile?: string) => fetchJSON<BrowserConfigurationStatus>(
     `/api/browser/status${profile ? `?profile=${encodeURIComponent(profile)}` : ""}`,
   ),
-  discoverBrowserProfiles: () =>
+  discoverBrowserProfiles: (includeEmails = false) =>
     fetchJSON<BrowserInventory>("/api/browser/discover", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ consent: true }),
+      body: JSON.stringify({ consent: true, include_emails: includeEmails }),
     }),
   buildWsUrl,
   getStatus: () => fetchJSON<StatusResponse>("/api/status"),

@@ -39,6 +39,40 @@ def test_malformed_state_falls_back_without_claiming_connection(tmp_path):
     assert warning == "metadata_unavailable"
 
 
+def test_email_is_separately_opted_in_and_never_inferred_from_label(tmp_path):
+    (tmp_path / "Default").mkdir()
+    (tmp_path / "Profile 1").mkdir()
+    (tmp_path / "Local State").write_text(json.dumps({
+        "os_crypt": {"encrypted_key": "SECRET"},
+        "profile": {"info_cache": {
+            "Default": {"name": "Work", "user_name": "work@example.com",
+                        "gaia_id": "DO NOT EXPOSE"},
+            "Profile 1": {"name": "label@example.com"},
+        }},
+    }))
+    default_rows, _ = inspect_profiles(tmp_path)
+    assert all("email" not in row for row in default_rows)
+    rows, warning = inspect_profiles(tmp_path, include_emails=True)
+    assert warning is None
+    assert rows[0]["email"] == "work@example.com"
+    assert rows[1]["email"] is None
+    assert "label@example.com" not in json.dumps(rows)
+    assert "SECRET" not in json.dumps(rows)
+    assert "DO NOT EXPOSE" not in json.dumps(rows)
+    assert rows[0]["site_session"] == "not_checked"
+
+
+def test_invalid_email_metadata_is_not_exposed(tmp_path):
+    (tmp_path / "Default").mkdir()
+    for value in (None, 123, "not an email", "a@example.com\nSECRET",
+                  "<script>@example.com", "x" * 255 + "@example.com"):
+        (tmp_path / "Local State").write_text(json.dumps({
+            "profile": {"info_cache": {"Default": {"user_name": value}}},
+        }))
+        rows, _ = inspect_profiles(tmp_path, include_emails=True)
+        assert rows[0]["email"] is None
+
+
 def test_symlink_profile_is_not_followed(tmp_path):
     root = tmp_path / "browser"
     root.mkdir()

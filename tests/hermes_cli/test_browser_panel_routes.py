@@ -24,29 +24,58 @@ HEADERS = {"X-Hermes-Session-Token": "test-session"}
 
 
 def test_discovery_requires_auth_before_reading(client, monkeypatch):
-    monkeypatch.setattr(browser, "discover_browsers", lambda: pytest.fail("must not discover"))
+    monkeypatch.setattr(browser, "discover_browsers", lambda **kwargs: pytest.fail("must not discover"))
     assert client.post("/api/browser/discover", json={"consent": True}).status_code == 401
     assert client.get("/api/browser/status").status_code == 401
 
 
 def test_discovery_requires_consent(client, monkeypatch):
-    monkeypatch.setattr(browser, "discover_browsers", lambda: pytest.fail("must not discover"))
+    monkeypatch.setattr(browser, "discover_browsers", lambda **kwargs: pytest.fail("must not discover"))
     assert client.post("/api/browser/discover", headers=HEADERS, json={}).status_code == 400
     assert client.post("/api/browser/discover", headers=HEADERS, json={"consent": False}).status_code == 400
 
 
 def test_no_client_filesystem_paths(client, monkeypatch):
-    monkeypatch.setattr(browser, "discover_browsers", lambda: pytest.fail("must not discover"))
+    monkeypatch.setattr(browser, "discover_browsers", lambda **kwargs: pytest.fail("must not discover"))
     assert client.post("/api/browser/discover", headers=HEADERS,
                        json={"consent": True, "path": "/secret"}).status_code == 422
 
 
 def test_metadata_response(client, monkeypatch):
     expected = {"browsers": [], "read_only": True}
-    monkeypatch.setattr(browser, "discover_browsers", lambda: expected)
+    monkeypatch.setattr(browser, "discover_browsers", lambda **kwargs: expected)
     response = client.post("/api/browser/discover", headers=HEADERS, json={"consent": True})
     assert response.status_code == 200
     assert response.json() == expected
+
+
+@pytest.mark.parametrize("include_emails", [False, True])
+def test_email_scope_is_explicit(client, monkeypatch, include_emails):
+    scopes = []
+
+    def discover(**kwargs):
+        scopes.append(kwargs["include_emails"])
+        return {"read_only": True, "browsers": [], "emails_included": kwargs["include_emails"]}
+
+    monkeypatch.setattr(browser, "discover_browsers", discover)
+    body = {"consent": True}
+    if include_emails:
+        body["include_emails"] = True
+    response = client.post("/api/browser/discover", headers=HEADERS, json=body)
+    assert response.status_code == 200
+    assert scopes == [include_emails]
+    assert response.json()["emails_included"] is include_emails
+
+
+def test_email_flag_does_not_replace_discovery_consent(client, monkeypatch):
+    monkeypatch.setattr(browser, "discover_browsers",
+                        lambda **kwargs: pytest.fail("must not discover"))
+    response = client.post("/api/browser/discover", headers=HEADERS,
+                           json={"include_emails": True})
+    assert response.status_code == 400
+    response = client.post("/api/browser/discover", headers=HEADERS,
+                           json={"consent": True, "include_emails": "true"})
+    assert response.status_code == 422
 
 
 @pytest.mark.parametrize("content_type,expected_status", [
@@ -58,7 +87,7 @@ def test_serialized_consent_requires_json_content_type(client, monkeypatch,
     expected = {"browsers": [], "read_only": True}
     calls = []
 
-    def discover():
+    def discover(**kwargs):
         calls.append(True)
         return expected
 
