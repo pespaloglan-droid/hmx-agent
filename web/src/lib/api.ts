@@ -5,7 +5,7 @@ import {
 } from "@hermes/shared";
 
 import type { AuxiliaryModelsResponse } from "./api-aux";
-import type { BrowserConfigurationStatus, BrowserInventory } from "./api-browser";
+import type { BrowserConfigurationStatus, BrowserConnectionProbe, BrowserInventory } from "./api-browser";
 import type {
   ManagedFileReadResponse,
   ManagedFilesResponse,
@@ -414,6 +414,12 @@ function appendSessionFilters(url: string, options: SessionQueryOptions): string
 }
 
 export const api = {
+  probeBrowserConnection: () =>
+    fetchJSON<BrowserConnectionProbe>("/api/browser/probe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ consent: true }),
+    }),
   getBrowserStatus: (profile?: string) => fetchJSON<BrowserConfigurationStatus>(
     `/api/browser/status${profile ? `?profile=${encodeURIComponent(profile)}` : ""}`,
   ),

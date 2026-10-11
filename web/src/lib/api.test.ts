@@ -55,6 +55,17 @@ function jsonFetchMock(body: unknown = { ok: true }) {
 }
 
 describe("fetchJSON", () => {
+  it("sends authenticated JSON consent for the one-shot connection test", async () => {
+    const fetchMock = jsonFetchMock({ state: "reachable" });
+    vi.stubGlobal("fetch", fetchMock);
+    await api.probeBrowserConnection();
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/probe");
+    expect(options?.method).toBe("POST");
+    expect(new Headers(options?.headers).get("Content-Type")).toBe("application/json");
+    expect(new Headers(options?.headers).get(SESSION_HEADER)).toBe("stale-token");
+    expect(JSON.parse(options?.body as string)).toEqual({ consent: true });
+  });
   it("protects browser discovery with the session header and explicit consent", async () => {
     const fetchMock = jsonFetchMock({ browsers: [], read_only: true });
     vi.stubGlobal("fetch", fetchMock);

@@ -43,6 +43,40 @@ Başarı doğru Chrome profilinin, Flow oturumunun veya çoklu profil ayrımın�
 değildir. Üretim denemesi başlatılmaz. Test bittiğinde veya ertelendiğinde Chrome
 hata ayıklama izni kapatılmalıdır.
 
+### Aynı testin dashboard kartı
+
+Tarayıcı sayfasındaki **Chrome bağlantı testi**, ayrı ve varsayılan olarak kapalı
+bir kullanım izniyle başlatılır. Sayfa açılması, metadata keşfi, e-posta izni veya
+profil seçimi test başlatmaz. Kart Windows/Chrome 144+ içindir.
+
+- Korunan `POST /api/browser/probe` yalnızca gerçek JSON boolean
+  `{"consent":true}` kabul eder. İstemci URL, dosya yolu veya profil kimliği
+  gönderemez.
+- Chrome'un sabit standart kullanıcı veri kökündeki `DevToolsActivePort`
+  dosyası 4096 baytla sınırlandırılır; symlink/junction ve bozuk içerik reddedilir.
+  Başka tarayıcı, profil kopyası, HTTP port taraması veya otomatik başlatma yoktur.
+- WebSocket sadece `127.0.0.1` adresine gider; proxy kullanılmaz.
+  Tek CDP komutu `Browser.getVersion` olur. Test sonunda kendi bağlantısı kapanır.
+  Chrome pencereleri kapanmaz ve Hermes tarayıcı ayarları değişmez.
+- Dashboard işlemi aynı anda yalnız bir onay testi başlatır. İkinci istek `busy`
+  sonucu alır. UI test sürerken yeniden başlatma ve izin değiştirmeyi engeller.
+- Bağlantı/onay için 60, yanıt için 10 saniye sınırı vardır. Sonuçlar güvenli hata
+  kodlarıdır; dosya yolları, WebSocket kimliği ve ham hata mesajı gösterilmez.
+- Sonuç geçici ve kontrol zamanıyla etiketlidir. “Test bağlantısı kapatıldı”
+  denir; kalıcı bağlı durumu veya doğrulanmış profil/Gmail/Flow rozeti oluşturmaz.
+  Seçili profil kutuları bu browser-instance testinin hedefini belirlemez.
+- Panelden çıkmak test sonucunu temizler fakat backend'de başlamış salt okunur
+  test, zaman sınırları içinde tamamlanabilir. Profil bazlı görev iptali veya
+  kalıcı bağlantı yönetimi değildir.
+
+Windows kabulü: güncel dalı çekip dashboard'u yeniden başlatın, Ctrl+Shift+R ile
+yenileyin. Karttaki ayrı izni işaretleyip testi başlatın. Sadece bu testin
+oluşturduğu Chrome isteğini onaylayın. Bekleme → sürüm/protokol ve “test bağlantısı
+kapatıldı” sonucu beklenir. Onay reddedildiğinde/zaman aşımında dürüst hata ve
+yeniden deneme olmalı; Flow'da gezinme veya üretim başlamamalıdır.
+
+### Kimlik eşleştirme kapıları
+
 1. Kullanıcının Windows/Chrome sürümü ve desteklenen bağlantı yolu doğrulanır.
    Normal Chrome'un mevcut profilinin yalnızca bulunmuş olması CDP erişimi
    veya Google oturumunun kullanılabilirliği anlamına gelmez.

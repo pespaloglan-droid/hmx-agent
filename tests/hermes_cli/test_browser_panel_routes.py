@@ -115,3 +115,31 @@ def test_status_preserves_requested_profile_and_hides_cdp(client, monkeypatch):
     assert scopes == ["worker"]
     assert response.json()["connection_state"] == "not_verified"
     assert "SECRET" not in response.text
+
+
+def test_probe_never_runs_without_auth_and_explicit_consent(client, monkeypatch):
+    async def forbidden():
+        pytest.fail("must not connect")
+    monkeypatch.setattr(browser, "run_browser_probe", forbidden)
+    assert client.post("/api/browser/probe", json={"consent": True}).status_code == 401
+    for body in ({}, {"consent": False}):
+        assert client.post("/api/browser/probe", headers=HEADERS, json=body).status_code == 400
+    assert client.post("/api/browser/probe", headers=HEADERS,
+                       json={"consent": "true"}).status_code == 422
+    for field in ("url", "path", "profile_id"):
+        assert client.post("/api/browser/probe", headers=HEADERS,
+                           json={"consent": True, field: "SECRET"}).status_code == 422
+
+
+def test_probe_returns_only_transport_result(client, monkeypatch):
+    expected = {"state": "reachable", "product": "Chrome/154.0.8037.98",
+                "protocol_version": "1.3"}
+    calls = []
+    async def probe():
+        calls.append(True)
+        return expected
+    monkeypatch.setattr(browser, "run_browser_probe", probe)
+    response = client.post("/api/browser/probe", headers=HEADERS, json={"consent": True})
+    assert response.status_code == 200
+    assert response.json() == expected
+    assert calls == [True]

@@ -74,7 +74,7 @@ describe("Browser panel", () => {
 
   it("discovers metadata only after consent and supports independent transient selections", async () => {
     await render();
-    await click(container.querySelector("input")!);
+    await click(container.querySelector('input[name="metadata-consent"]')!);
     await click(discoverButton());
     expect(mocks.discoverBrowserProfiles).toHaveBeenCalledTimes(1);
     expect(mocks.discoverBrowserProfiles).toHaveBeenCalledWith(false);
@@ -176,7 +176,7 @@ describe("Browser panel", () => {
   it("reports discovery failures and permits retry", async () => {
     mocks.discoverBrowserProfiles.mockRejectedValueOnce(new Error("SECRET"));
     await render();
-    await click(container.querySelector("input")!);
+    await click(container.querySelector('input[name="metadata-consent"]')!);
     await click(discoverButton());
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("tamamlanamadı");
     expect(container.textContent).not.toContain("SECRET");
@@ -191,14 +191,14 @@ describe("Browser panel", () => {
         warning: "access_denied", profiles: [] }],
     });
     await render();
-    await click(container.querySelector("input")!);
+    await click(container.querySelector('input[name="metadata-consent"]')!);
     await click(discoverButton());
     expect(container.textContent).toContain("erişim reddedildi");
   });
 
   it("clears consent and selections on an agent-profile switch", async () => {
     await render();
-    await click(container.querySelector("input")!);
+    await click(container.querySelector('input[name="metadata-consent"]')!);
     await click(discoverButton());
     await click(container.querySelector('input[name="browser-profile"]')!);
     mocks.profile = "worker";

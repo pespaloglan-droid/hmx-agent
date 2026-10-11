@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import type { BrowserConfigurationStatus, BrowserInventory } from "@/lib/api-browser";
 import { useProfileScope } from "@/contexts/useProfileScope";
 import { useI18n } from "@/i18n";
+import BrowserConnectionTest from "./BrowserConnectionTest";
 
 const copy = {
   tr: {
@@ -173,6 +174,8 @@ function BrowserPanel({ profile }: { profile: string }) {
           <p className="text-sm text-muted-foreground">{text.statusNote}</p>
         </CardContent>
       </Card>
+
+      <BrowserConnectionTest />
 
       <section aria-labelledby="browser-profiles-heading" className="space-y-4">
         <h2 id="browser-profiles-heading" className="text-lg font-semibold">{text.profiles}</h2>

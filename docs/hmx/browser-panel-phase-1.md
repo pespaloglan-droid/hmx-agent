@@ -19,7 +19,9 @@ Branch: `feat/browser-profile-panel`. The agent loop and chat interface are unch
   Missing/invalid values are shown as unavailable, never inferred from a label.
   Recorded emails may be stale and do not prove a signed-in site session.
 - No reads of Cookies, Login Data or profile Preferences; no browser launch,
-  process termination, copying, account login, CDP probing or config mutation.
+  process termination, copying, account login or config mutation. Metadata
+  discovery performs no CDP probing. A separate, explicitly approved connection
+  test now reads only the Chrome version and closes its own WebSocket.
 - Symlink/junction traversal refusal; bounded Local State metadata reads;
   malformed metadata fallback and per-browser permission/error indicators.
 - Multiple profile selections in screen-local state. They are neither persistent
@@ -34,7 +36,9 @@ Branch: `feat/browser-profile-panel`. The agent loop and chat interface are unch
 
 ## Deliberately not implemented yet
 
-Connection status is **not verified**. Found profiles are **not connected** and
+The configuration summary remains **not verified**. A separate one-shot transport
+test can report a successful version check, never a persistent connection.
+Found profiles are **not connected** and
 their site sessions are **not checked**. This page does not yet attach to an
 existing Chrome profile, control Flow, execute parallel profile tasks, stream
 video/screenshots, or stop browser tasks. The page describes these as future work,
@@ -147,3 +151,18 @@ performed by the user before proceeding to step 2.
 - Local Chromium visual fixture: 1360px desktop and 390px mobile; no page errors,
   no horizontal overflow on mobile, two-profile selection counter verified.
 - Windows profile discovery / actual Chrome attach: **not tested here**.
+
+### One-shot connection-test preparation
+
+The new connection card requires its own consent and a button press. It never
+starts from a page load, profile selection or metadata/email discovery.
+Validation: **462 web tests**, **40 inventory/router/transport tests**, and
+**12 CLI probe tests** passed, plus TypeScript, changed-file frontend lint and
+the production build. Transport tests use synthetic discovery files and a local
+WebSocket CDP fixture; visual tests use mocked responses. Desktop/mobile checks
+verify disabled waiting controls, no automatic probe, safe timeout/retry, no
+mobile horizontal overflow and no page errors.
+
+Actual Windows Chrome approval, profile/account identity and Flow access remain
+pending the user's test. See
+[connection preparation](browser-connection-preflight.md) for the exact scope.

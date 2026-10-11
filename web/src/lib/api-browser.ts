@@ -31,3 +31,12 @@ export interface BrowserInventory {
     profiles: BrowserProfileMetadata[];
   }[];
 }
+
+export interface BrowserConnectionProbe {
+  state: "reachable" | "busy" | "unsupported_platform" | "not_found"
+    | "invalid_discovery" | "discovery_unavailable" | "dependency_missing"
+    | "timeout" | "invalid_reply" | "connection_failed";
+  product?: string;
+  protocol_version?: string;
+  checked_at?: string;
+}

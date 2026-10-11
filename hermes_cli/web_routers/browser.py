@@ -1,4 +1,4 @@
-"""Browser panel phase 1: protected, read-only metadata and configuration."""
+"""Protected browser metadata, configuration and explicit one-shot transport check."""
 
 from typing import Optional
 
@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, StrictBool
 from starlette.concurrency import run_in_threadpool
 
 from hermes_cli.browser_inventory import browser_configuration_status, discover_browsers
+from hermes_cli.browser_connection_probe import run_browser_probe
 from hermes_cli.web_deps import late
 from hermes_cli.web_routers._common import config_scoped_to_thread
 
@@ -19,6 +20,21 @@ class DiscoveryConsent(BaseModel):
     model_config = ConfigDict(extra="forbid")
     consent: bool = False
     include_emails: StrictBool = False
+
+
+class ProbeConsent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    consent: StrictBool = False
+
+
+@router.post("/api/browser/probe")
+async def browser_probe(request: Request, body: ProbeConsent):
+    _require_token(request)
+    if body.consent is not True:
+        raise HTTPException(status_code=400, detail="Chrome connection test requires consent")
+    # No profile ID: discovery selections aren't proof of Chrome identity.
+    # No persistence, config mutation, fallback launch, tab or account access.
+    return await run_browser_probe()
 
 
 @router.get("/api/browser/status")
