@@ -420,6 +420,7 @@ export const api = {
   discoverBrowserProfiles: () =>
     fetchJSON<BrowserInventory>("/api/browser/discover", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ consent: true }),
     }),
   buildWsUrl,

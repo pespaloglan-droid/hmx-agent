@@ -63,6 +63,7 @@ describe("fetchJSON", () => {
     expect(url).toBe("/api/browser/discover");
     expect(options?.method).toBe("POST");
     expect(JSON.parse(options?.body as string)).toEqual({ consent: true });
+    expect(new Headers(options?.headers).get("Content-Type")).toBe("application/json");
     expect(new Headers(options?.headers).get(SESSION_HEADER)).toBe("stale-token");
   });
 

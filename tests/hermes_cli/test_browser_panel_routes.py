@@ -49,6 +49,29 @@ def test_metadata_response(client, monkeypatch):
     assert response.json() == expected
 
 
+@pytest.mark.parametrize("content_type,expected_status", [
+    ("text/plain;charset=UTF-8", 422),
+    ("application/json", 200),
+])
+def test_serialized_consent_requires_json_content_type(client, monkeypatch,
+                                                       content_type, expected_status):
+    expected = {"browsers": [], "read_only": True}
+    calls = []
+
+    def discover():
+        calls.append(True)
+        return expected
+
+    monkeypatch.setattr(browser, "discover_browsers", discover)
+    response = client.post("/api/browser/discover",
+                           headers={**HEADERS, "Content-Type": content_type},
+                           content='{"consent":true}')
+    assert response.status_code == expected_status
+    assert calls == ([True] if expected_status == 200 else [])
+    if expected_status == 200:
+        assert response.json() == expected
+
+
 def test_status_preserves_requested_profile_and_hides_cdp(client, monkeypatch):
     scopes = []
 
