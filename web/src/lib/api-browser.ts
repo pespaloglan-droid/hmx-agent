@@ -40,3 +40,13 @@ export interface BrowserConnectionProbe {
   protocol_version?: string;
   checked_at?: string;
 }
+
+export interface BrowserFlowResult {
+  state: BrowserConnectionProbe["state"] | "listed" | "workspace_visible"
+    | "login_prompt" | "inconclusive" | "target_changed" | "target_unavailable"
+    | "read_blocked";
+  targets?: { id: string; label: string; origin: string }[];
+  markers?: { page_ready: boolean; new_project_visible: boolean; sign_in_visible: boolean };
+  account_verified?: false;
+  checked_at?: string;
+}

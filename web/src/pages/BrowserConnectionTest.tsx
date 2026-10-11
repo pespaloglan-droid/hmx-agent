@@ -101,7 +101,7 @@ export default function BrowserConnectionTest() {
             }} />
           <span>{text.permission}</span>
         </label>
-        <Button className="max-w-full whitespace-normal" disabled={!consent || testing}
+        <Button className="h-auto min-h-9 max-w-full whitespace-normal py-2 leading-relaxed" disabled={!consent || testing}
           onClick={() => void test()}>
           {testing ? text.testingLabel : text.button}
         </Button>

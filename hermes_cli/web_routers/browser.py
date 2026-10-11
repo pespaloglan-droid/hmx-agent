@@ -8,6 +8,7 @@ from starlette.concurrency import run_in_threadpool
 
 from hermes_cli.browser_inventory import browser_configuration_status, discover_browsers
 from hermes_cli.browser_connection_probe import run_browser_probe
+from hermes_cli.browser_flow_check import check_flow_tab, list_flow_tabs
 from hermes_cli.web_deps import late
 from hermes_cli.web_routers._common import config_scoped_to_thread
 
@@ -25,6 +26,26 @@ class DiscoveryConsent(BaseModel):
 class ProbeConsent(BaseModel):
     model_config = ConfigDict(extra="forbid")
     consent: StrictBool = False
+
+
+class FlowTargetConsent(ProbeConsent):
+    target_id: str
+
+
+@router.post("/api/browser/flow/tabs")
+async def browser_flow_tabs(request: Request, body: ProbeConsent):
+    _require_token(request)
+    if body.consent is not True:
+        raise HTTPException(status_code=400, detail="Flow tab metadata consent is required")
+    return await list_flow_tabs()
+
+
+@router.post("/api/browser/flow/check")
+async def browser_flow_check(request: Request, body: FlowTargetConsent):
+    _require_token(request)
+    if body.consent is not True:
+        raise HTTPException(status_code=400, detail="Flow read-only check consent is required")
+    return await check_flow_tab(body.target_id)
 
 
 @router.post("/api/browser/probe")

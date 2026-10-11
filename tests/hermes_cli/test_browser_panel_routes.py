@@ -143,3 +143,33 @@ def test_probe_returns_only_transport_result(client, monkeypatch):
     assert response.status_code == 200
     assert response.json() == expected
     assert calls == [True]
+
+
+def test_flow_routes_require_independent_consent_and_refuse_arbitrary_code(client, monkeypatch):
+    async def forbidden(*args):
+        pytest.fail("must not connect")
+    monkeypatch.setattr(browser, "list_flow_tabs", forbidden)
+    monkeypatch.setattr(browser, "check_flow_tab", forbidden)
+    for route, body in [
+        ("/api/browser/flow/tabs", {"consent": True}),
+        ("/api/browser/flow/check", {"consent": True, "target_id": "flow-1"}),
+    ]:
+        assert client.post(route, json=body).status_code == 401
+        assert client.post(route, headers=HEADERS,
+                           json={**body, "consent": False}).status_code == 400
+        for key in ("url", "code", "expression", "profile_path"):
+            assert client.post(route, headers=HEADERS,
+                               json={**body, key: "SECRET"}).status_code == 422
+
+
+def test_flow_check_passes_only_the_explicit_target(client, monkeypatch):
+    seen = []
+    async def check(target):
+        seen.append(target)
+        return {"state": "workspace_visible", "account_verified": False}
+    monkeypatch.setattr(browser, "check_flow_tab", check)
+    response = client.post("/api/browser/flow/check", headers=HEADERS,
+                           json={"consent": True, "target_id": "flow-2"})
+    assert response.status_code == 200
+    assert seen == ["flow-2"]
+    assert response.json()["account_verified"] is False

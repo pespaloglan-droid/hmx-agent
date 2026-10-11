@@ -21,7 +21,9 @@ Branch: `feat/browser-profile-panel`. The agent loop and chat interface are unch
 - No reads of Cookies, Login Data or profile Preferences; no browser launch,
   process termination, copying, account login or config mutation. Metadata
   discovery performs no CDP probing. A separate, explicitly approved connection
-  test now reads only the Chrome version and closes its own WebSocket.
+  test reads only the Chrome version and closes its own WebSocket. A separate
+  Flow-only check can now list allowed tab titles and read fixed page markers
+  from one explicitly selected tab, without clicks or generation.
 - Symlink/junction traversal refusal; bounded Local State metadata reads;
   malformed metadata fallback and per-browser permission/error indicators.
 - Multiple profile selections in screen-local state. They are neither persistent
@@ -39,8 +41,9 @@ Branch: `feat/browser-profile-panel`. The agent loop and chat interface are unch
 The configuration summary remains **not verified**. A separate one-shot transport
 test can report a successful version check, never a persistent connection.
 Found profiles are **not connected** and
-their site sessions are **not checked**. This page does not yet attach to an
-existing Chrome profile, control Flow, execute parallel profile tasks, stream
+their account identities are **not verified**. The explicit Flow-tab marker check
+never maps a tab to a discovered profile or Gmail identity. This page does not yet
+create persistent profile connections, control Flow production, execute parallel profile tasks, stream
 video/screenshots, or stop browser tasks. The page describes these as future work,
 not working buttons or fabricated activity.
 
@@ -166,3 +169,25 @@ mobile horizontal overflow and no page errors.
 Actual Windows Chrome approval, profile/account identity and Flow access remain
 pending the user's test. See
 [connection preparation](browser-connection-preflight.md) for the exact scope.
+
+### Explicit Flow-tab read-only follow-up
+
+The user's Windows Chrome version test returned Chrome 154 / CDP 1.3 with the
+test connection closed. They manually opened Flow; this is not evidence of an
+automated Flow check. The new independent card lists exact-origin Flow tabs,
+requires explicit radio selection, revalidates the target and reads only fixed
+page-state markers under Chrome's side-effect guard. It never automatically
+selects another tab or asserts Gmail/account identity. See the preparation guide
+for the command allowlist, privacy limits and Windows acceptance procedure.
+
+Validation: **471 web tests**, **64 targeted Python tests** (isolated Python 3.13),
+TypeScript, changed-file lint and production build passed. Synthetic CDP tests
+verify chosen-target-only attachment/detachment and safe failure states. A local
+Chromium DOM fixture exercises the actual guarded expression with English,
+Turkish and Russian labels, blocks a different origin and verifies no clicks or
+password return. Desktop/mobile UI fixtures verify explicit consent/selection,
+stale-target failure without fallback, revocation clearing and no horizontal
+overflow. These are local fixtures, not a real Windows Flow/account test.
+
+Actual Windows Flow marker-check acceptance, profile identity mapping, parallel
+sessions, live view and production remain pending. Main is not merged.

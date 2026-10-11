@@ -5,7 +5,7 @@ import {
 } from "@hermes/shared";
 
 import type { AuxiliaryModelsResponse } from "./api-aux";
-import type { BrowserConfigurationStatus, BrowserConnectionProbe, BrowserInventory } from "./api-browser";
+import type { BrowserConfigurationStatus, BrowserConnectionProbe, BrowserFlowResult, BrowserInventory } from "./api-browser";
 import type {
   ManagedFileReadResponse,
   ManagedFilesResponse,
@@ -414,6 +414,16 @@ function appendSessionFilters(url: string, options: SessionQueryOptions): string
 }
 
 export const api = {
+  listFlowTabs: () =>
+    fetchJSON<BrowserFlowResult>("/api/browser/flow/tabs", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ consent: true }),
+    }),
+  checkFlowTab: (targetId: string) =>
+    fetchJSON<BrowserFlowResult>("/api/browser/flow/check", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ consent: true, target_id: targetId }),
+    }),
   probeBrowserConnection: () =>
     fetchJSON<BrowserConnectionProbe>("/api/browser/probe", {
       method: "POST",

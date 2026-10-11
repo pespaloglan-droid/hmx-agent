@@ -75,6 +75,38 @@ oluşturduğu Chrome isteğini onaylayın. Bekleme → sürüm/protokol ve “te
 kapatıldı” sonucu beklenir. Onay reddedildiğinde/zaman aşımında dürüst hata ve
 yeniden deneme olmalı; Flow'da gezinme veya üretim başlamamalıdır.
 
+### Flow sekmesi — salt okunur kontrol
+
+Chrome sürüm testinin ardından ayrı, varsayılan olarak kapalı izinle iki adım:
+**Açık Flow sekmelerini bul** → bir sekmeyi açıkça seç → **Seçili Flow sekmesini
+kontrol et**. İlk sekme otomatik seçilmez. Profil/e-posta kutuları hedef belirlemez.
+
+- Kimlik doğrulamalı `POST /api/browser/flow/tabs` yalnız JSON `consent:true`,
+  `/api/browser/flow/check` ayrıca tek `target_id` kabul eder. Keyfi URL, dosya yolu,
+  CDP komutu veya JavaScript gönderilemez.
+- `Target.getTargets` yanıtı bellekte filtrelenir: yalnız tam HTTPS
+  `flow.google.com` origin'inin normal sayfa sekmeleri listelenir. Başka sitelerin
+  başlıkları, URL yolları ve sorguları istemciye veya ham debug loglarına verilmez.
+- İkinci adım hedefi tekrar doğrular, yalnız o sekmeye geçici CDP session bağlar.
+  Sabit DOM ifadesi origin'i yeniden kontrol ettikten sonra sayfanın hazır olması,
+  görünen Yeni proje / giriş düğmesi işaretlerini boolean olarak döndürür.
+  Türkçe, İngilizce ve Rusça düğme etiketleri desteklenir; farklı tasarım/dilde
+  sonuç kesinleştirilemeyebilir. Bu işaretler Gmail veya profil kimliğini kanıtlamaz.
+- `Runtime.evaluate` için `throwOnSideEffect:true` korunur. Engellenen okuma daha
+  geniş yetkiyle tekrar denenmez. Tıklama, gezinme, proje/üretim, hesap değiştirme,
+  form değeri, parola, çerez, depolama okuması veya profil kopyası yoktur.
+- Hedef kapanır/değişirse başka sekmeye geçilmez. Yalnız test session'ı ayrılır ve
+  WebSocket kapanır; Chrome açık kalır. Ayarlar veya kalıcı bağlantı değiştirilmez.
+  Tüm işlem yaklaşık 75 saniyeyle sınırlıdır; aynı süreçteki Chrome testleri ortak
+  kilit kullanır. Chrome listeleme ve kontrol için ayrı onay isteyebilir.
+
+Windows kabulü: açık Flow sekmesini aynı Chrome örneğinde bırakın. Yeni kartın
+iznini verip listeyi alın; yalnız bu işlemden sonra gelen Chrome isteğini onaylayın.
+İstediğiniz sekmeyi seçip kontrol edin. **Flow çalışma alanı işaretleri görüldü**,
+giriş işareti veya dürüst belirsizlik/hata beklenir; üretim başlamamalıdır.
+Sonucu kişisel sekme başlıklarını gizleyerek paylaşın. Test bitince Chrome hata
+ayıklama iznini kapatın. Çoklu profil ve üretim kapıları hâlâ ayrı kabul gerektirir.
+
 ### Kimlik eşleştirme kapıları
 
 1. Kullanıcının Windows/Chrome sürümü ve desteklenen bağlantı yolu doğrulanır.

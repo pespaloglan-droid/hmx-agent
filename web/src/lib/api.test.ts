@@ -55,6 +55,22 @@ function jsonFetchMock(body: unknown = { ok: true }) {
 }
 
 describe("fetchJSON", () => {
+  it("sends only Flow consent and the explicitly selected target", async () => {
+    const fetchMock = jsonFetchMock({ state: "listed", targets: [] });
+    vi.stubGlobal("fetch", fetchMock);
+    await api.listFlowTabs();
+    await api.checkFlowTab("flow-2");
+    const [listUrl, listOptions] = fetchMock.mock.calls[0];
+    const [checkUrl, checkOptions] = fetchMock.mock.calls[1];
+    expect(listUrl).toBe("/api/browser/flow/tabs");
+    expect(checkUrl).toBe("/api/browser/flow/check");
+    expect(JSON.parse(listOptions?.body as string)).toEqual({ consent: true });
+    expect(JSON.parse(checkOptions?.body as string)).toEqual({ consent: true, target_id: "flow-2" });
+    for (const options of [listOptions, checkOptions]) {
+      expect(new Headers(options?.headers).get("Content-Type")).toBe("application/json");
+      expect(new Headers(options?.headers).get(SESSION_HEADER)).toBe("stale-token");
+    }
+  });
   it("sends authenticated JSON consent for the one-shot connection test", async () => {
     const fetchMock = jsonFetchMock({ state: "reachable" });
     vi.stubGlobal("fetch", fetchMock);

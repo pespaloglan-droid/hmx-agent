@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import threading
 from datetime import datetime, timezone
@@ -13,6 +14,10 @@ from hermes_platform.host import facts
 # This lock protects an OS-user browser resource, not a Hermes agent profile.
 # It intentionally prevents two approval prompts from this dashboard process.
 _PROBE_LOCK = threading.Lock()
+
+# Private logger: never emit raw CDP frames or endpoints, even with global DEBUG.
+_QUIET_CDP_LOGGER = logging.Logger("hmx.private_cdp")
+_QUIET_CDP_LOGGER.disabled = True
 
 
 def read_chrome_endpoint(root: Path) -> str:
@@ -49,7 +54,7 @@ async def probe_endpoint(endpoint: str) -> dict:
     try:
         async with connect(endpoint, proxy=None, open_timeout=60, close_timeout=1,
                            max_size=4096, ping_interval=None,
-                           user_agent_header="HMX Chrome connection test") as socket:
+                           user_agent_header="HMX Chrome connection test", logger=_QUIET_CDP_LOGGER) as socket:
             await socket.send(json.dumps({"id": 1, "method": "Browser.getVersion"}))
             reply = json.loads(await asyncio.wait_for(socket.recv(), timeout=10))
             result = reply.get("result", {}) if isinstance(reply, dict) else {}
@@ -69,7 +74,7 @@ async def probe_endpoint(endpoint: str) -> dict:
         return {"state": "connection_failed"}
 
 
-async def probe_chrome_root(root: Path) -> dict:
+async def probe_chrome_root(root: Path, *, check=None) -> dict:
     """OS-independent core, also usable with a synthetic discovery fixture."""
     if not _PROBE_LOCK.acquire(blocking=False):
         return {"state": "busy"}
@@ -82,15 +87,15 @@ async def probe_chrome_root(root: Path) -> dict:
             return {"state": "invalid_discovery"}
         except OSError:
             return {"state": "discovery_unavailable"}
-        result = await probe_endpoint(endpoint)
+        result = await (check or probe_endpoint)(endpoint)
         return {**result, "checked_at": datetime.now(timezone.utc).isoformat()}
     finally:
         _PROBE_LOCK.release()
 
 
-async def run_browser_probe() -> dict:
+async def run_browser_probe(*, check=None) -> dict:
     if facts.os_family() != "win32":
         return {"state": "unsupported_platform"}
     from hermes_cli.browser_connect import real_profile_data_dir
     root = real_profile_data_dir("chrome")
-    return await probe_chrome_root(Path(root)) if root else {"state": "not_found"}
+    return await probe_chrome_root(Path(root), check=check) if root else {"state": "not_found"}

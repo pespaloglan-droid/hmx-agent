@@ -7,6 +7,7 @@ import type { BrowserConfigurationStatus, BrowserInventory } from "@/lib/api-bro
 import { useProfileScope } from "@/contexts/useProfileScope";
 import { useI18n } from "@/i18n";
 import BrowserConnectionTest from "./BrowserConnectionTest";
+import FlowTabCheck from "./FlowTabCheck";
 
 const copy = {
   tr: {
@@ -176,6 +177,7 @@ function BrowserPanel({ profile }: { profile: string }) {
       </Card>
 
       <BrowserConnectionTest />
+      <FlowTabCheck />
 
       <section aria-labelledby="browser-profiles-heading" className="space-y-4">
         <h2 id="browser-profiles-heading" className="text-lg font-semibold">{text.profiles}</h2>
