@@ -93,6 +93,7 @@ export interface Translations {
       stopped: string;
     };
     nav: {
+      browser?: string;
       analytics: string;
       chat: string;
       config: string;

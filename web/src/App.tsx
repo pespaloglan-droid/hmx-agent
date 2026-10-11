@@ -87,6 +87,7 @@ const SessionsPage = lazy(() => import("@/pages/SessionsPage"));
 const LogsPage = lazy(() => import("@/pages/LogsPage"));
 const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
 const ModelsPage = lazy(() => import("@/pages/ModelsPage"));
+const BrowserPage = lazy(() => import("@/pages/BrowserPage"));
 const CronPage = lazy(() => import("@/pages/CronPage"));
 const ProfilesPage = lazy(() => import("@/pages/ProfilesPage"));
 const ProfileBuilderPage = lazy(() => import("@/pages/ProfileBuilderPage"));
@@ -162,6 +163,7 @@ const BUILTIN_ROUTES_CORE: Record<string, ComponentType> = {
   "/files": FilesPage,
   "/analytics": AnalyticsPage,
   "/models": ModelsPage,
+  "/browser": BrowserPage,
   "/logs": LogsPage,
   "/cron": CronPage,
   "/skills": SkillsPage,
@@ -187,6 +189,7 @@ function ChatRouteSink() {
 }
 
 const BUILTIN_NAV_REST: NavItem[] = [
+  { path: "/browser", labelKey: "browser", label: "Browser", icon: Globe },
   {
     path: "/sessions",
     labelKey: "sessions",

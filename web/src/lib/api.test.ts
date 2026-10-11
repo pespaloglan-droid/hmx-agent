@@ -55,6 +55,24 @@ function jsonFetchMock(body: unknown = { ok: true }) {
 }
 
 describe("fetchJSON", () => {
+  it("protects browser discovery with the session header and explicit consent", async () => {
+    const fetchMock = jsonFetchMock({ browsers: [], read_only: true });
+    vi.stubGlobal("fetch", fetchMock);
+    await api.discoverBrowserProfiles();
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/discover");
+    expect(options?.method).toBe("POST");
+    expect(JSON.parse(options?.body as string)).toEqual({ consent: true });
+    expect(new Headers(options?.headers).get(SESSION_HEADER)).toBe("stale-token");
+  });
+
+  it("scopes browser configuration to the selected agent profile", async () => {
+    const fetchMock = jsonFetchMock();
+    vi.stubGlobal("fetch", fetchMock);
+    setManagementProfile("worker");
+    await api.getBrowserStatus();
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/browser/status?profile=worker");
+  });
   it("tries the one-shot reload path for loopback 401s", async () => {
     vi.stubGlobal(
       "fetch",

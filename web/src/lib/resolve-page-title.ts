@@ -1,10 +1,12 @@
 import type { Translations } from "@/i18n/types";
+import { en } from "@/i18n/en";
 
 const BUILTIN: Record<string, keyof Translations["app"]["nav"]> = {
   "/chat": "chat",
   "/sessions": "sessions",
   "/analytics": "analytics",
   "/models": "models",
+  "/browser": "browser",
   "/logs": "logs",
   "/cron": "cron",
   "/skills": "skills",
@@ -42,7 +44,7 @@ export function resolvePageTitle(
   }
   const key = BUILTIN[normalized];
   if (key) {
-    return t.app.nav[key];
+    return t.app.nav[key] ?? en.app.nav[key] ?? t.app.webUi;
   }
   const literal = BUILTIN_LITERAL[normalized];
   if (literal) {

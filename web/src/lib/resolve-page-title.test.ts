@@ -24,6 +24,11 @@ const t = {
 } as unknown as Translations;
 
 describe("resolvePageTitle", () => {
+  it("translates Browser with an English fallback for older locales", () => {
+    expect(resolvePageTitle("/browser", t, [])).toBe("Browser");
+    const translated = { ...t, app: { ...t.app, nav: { ...t.app.nav, browser: "Tarayıcı" } } };
+    expect(resolvePageTitle("/browser", translated, [])).toBe("Tarayıcı");
+  });
   it("uses i18n nav keys for translated routes", () => {
     expect(resolvePageTitle("/sessions", t, [])).toBe("Sessions");
     expect(resolvePageTitle("/env", t, [])).toBe("Keys");

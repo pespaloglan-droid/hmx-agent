@@ -74,6 +74,7 @@ export const en: Translations = {
       stopped: "Stopped",
     },
     nav: {
+      browser: "Browser",
       analytics: "Analytics",
       chat: "Chat",
       config: "Config",

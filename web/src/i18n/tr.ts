@@ -67,6 +67,7 @@ export const tr: Translations = {
       stopped: "Durduruldu",
     },
     nav: {
+      browser: "Tarayıcı",
       analytics: "Analiz",
       chat: "Sohbet",
       config: "Yapılandırma",
