@@ -80,12 +80,28 @@ class StageStore:
             db.execute("UPDATE stages SET state=?,result=? WHERE id=?", (result["state"], json.dumps(result), stage_id))
 
     def status(self, stage_id: str) -> dict:
-        with self._connect() as db:
-            row = db.execute("SELECT state,result FROM stages WHERE id=?", (stage_id,)).fetchone()
+        row = self.lookup(stage_id)
         if row is None:
             return {"state": "not_found", "production_submitted": False}
-        # An interrupted request is not considered safe to retry after restart.
-        return json.loads(row["result"]) if row["result"] else {"state": "stage_uncertain", "production_submitted": False}
+        # Interrupted submission is permanently fenced, even if the old staging
+        # receipt was written before the process stopped.
+        if row["state"] == "submission_attempt_started":
+            result = {"state": "submission_uncertain", "production_submitted": None}
+        else:
+            result = json.loads(row["result"]) if row["result"] else {"state": "stage_uncertain", "production_submitted": False}
+        return {**result, "stage_id": stage_id, "stage_meta": {
+            "target_id": row["target"], "project_url": row["project"], "item_count": row["count"]}}
+
+    def lookup(self, stage_id: str) -> dict | None:
+        with self._connect() as db:
+            row = db.execute("SELECT * FROM stages WHERE id=?", (stage_id,)).fetchone()
+        return dict(row) if row is not None else None
+
+    def claim_submission(self, stage_id: str, digest: str, count: int) -> bool:
+        with self._connect() as db:
+            changed = db.execute("""UPDATE stages SET state='submission_attempt_started',result=NULL
+                WHERE id=? AND digest=? AND count=? AND state='text_staged'""", (stage_id, digest, count))
+            return changed.rowcount == 1
 
 
 # One synchronous operation checks origin/project, empty editor, idle controls,

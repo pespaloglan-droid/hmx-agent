@@ -8,7 +8,7 @@ import { imageDraftProject, parseImageDraft, type ImageDraftResult } from "@/lib
 interface Props { targetId: string; targetLabel: string }
 const copy = {
   tr: {
-    title: "Görsel üretim taslağı — gönderim yok", scope: "Taslak kontrolü Flow'a metin yazmaz ve üretim izni vermez. Metin yerleştirme, ayrı yazma izni gerektiren bir testtir; gönderim/üretim henüz uygulanmadı. Aşağıdaki ayrı kontrol, sekme/proje eşleşmesini salt okunur inceler; üretim otomasyonu henüz uygulanmadı. Taslak yalnız bu ekranda tutulur; yenilemede, izin kaldırıldığında veya sekme seçiminde temizlenir.",
+    title: "Görsel üretim taslağı — gönderim yok", scope: "Taslak kontrolü Flow'a metin yazmaz ve üretim izni vermez. Metin yerleştirme, ayrı yazma izni gerektiren bir testtir; iki satırlık test gönderimi ayrı üretim onayı gerektirir. Aşağıdaki ayrı kontrol, sekme/proje eşleşmesini salt okunur inceler; toplu üretim otomasyonu henüz uygulanmadı. Taslak yalnız bu ekranda tutulur; yenilemede, izin kaldırıldığında veya sekme seçiminde temizlenir.",
     target: "Salt okunur kontrolde seçilen sekme", project: "Test projesinin adresi (yalnız taslak)",
     input: "İsim ve prompt listesi", help: "Her satır: isim | prompt. En fazla 100 satır; her prompt 1 görsel, gruplar en fazla 10. İsimde yalnız harf (A–Z), rakam, _ ve - kullanın. Dosya uzantısı eklemeyin.",
     example: "2 örnek promptu yükle", prepare: "Taslağı kontrol et", empty: "En az bir prompt girin.", invalidProject: "Geçerli bir https://flow.google.com/project/… adresi girin (proje veya /collection/ adresi; sorgu olmadan).",
@@ -17,7 +17,7 @@ const copy = {
     issues: { format: "isim | prompt biçimini kullanın", name: "güvenli ve geçerli bir isim kullanın", duplicate: "aynı isim tekrar ediyor (büyük/küçük harf dahil)", prompt: "prompt boş olamaz ve 8000 karakteri geçemez", limit: "en fazla 100 prompt kabul edilir", size: "liste 200.000 karakteri geçemez" }, line: "Satır",
   },
   en: {
-    title: "Image production draft — no submission", scope: "Draft checking writes nothing to Flow and authorizes no production. Text staging is a separate test requiring write consent; submission/production is not implemented yet. The separate check below inspects project/tab matching read-only; production automation is not implemented. Drafts are screen-local and clear on refresh, consent revocation or target change.",
+    title: "Image production draft — no submission", scope: "Draft checking writes nothing to Flow and authorizes no production. Text staging is a separate test requiring write consent; two-row test submission requires separate production consent. The separate check below inspects project/tab matching read-only; batch production automation is not implemented. Drafts are screen-local and clear on refresh, consent revocation or target change.",
     target: "Tab selected in the read-only check", project: "Test project URL (draft only)", input: "Name and prompt list",
     help: "Each line: name | prompt. Up to 100 lines; one image per prompt, groups of at most 10. Names use only A–Z letters, digits, _ and -. Do not add file extensions.",
     example: "Load 2 example prompts", prepare: "Check draft", empty: "Enter at least one prompt.", invalidProject: "Enter a valid https://flow.google.com/project/… URL using a project or /collection/ URL, without query.",

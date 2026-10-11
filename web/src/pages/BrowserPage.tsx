@@ -8,6 +8,7 @@ import { useProfileScope } from "@/contexts/useProfileScope";
 import { useI18n } from "@/i18n";
 import BrowserConnectionTest from "./BrowserConnectionTest";
 import FlowTabCheck from "./FlowTabCheck";
+import FlowSubmitTest from "./FlowSubmitTest";
 
 const copy = {
   tr: {
@@ -178,6 +179,7 @@ function BrowserPanel({ profile }: { profile: string }) {
 
       <BrowserConnectionTest />
       <FlowTabCheck />
+      <FlowSubmitTest />
 
       <section aria-labelledby="browser-profiles-heading" className="space-y-4">
         <h2 id="browser-profiles-heading" className="text-lg font-semibold">{text.profiles}</h2>

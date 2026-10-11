@@ -11,6 +11,7 @@ from hermes_cli.browser_connection_probe import run_browser_probe
 from hermes_cli.browser_flow_check import check_flow_tab, list_flow_tabs
 from hermes_cli.browser_flow_project import check_flow_project
 from hermes_cli.browser_flow_stage import StageStore, stage_flow_text
+from hermes_cli.browser_flow_submit import submit_flow_stage
 from hermes_constants import get_hermes_home
 from hermes_cli.web_deps import late
 from hermes_cli.web_routers._common import config_scoped_to_thread, destructive_profile
@@ -49,6 +50,31 @@ class FlowStageRequest(FlowProjectConsent):
     stage_id: str = Field(min_length=36, max_length=36)
     items: list[StageItem] = Field(min_length=1, max_length=2)
     fill_consent: StrictBool = False
+
+
+class FlowSubmitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    stage_id: str = Field(min_length=36, max_length=36)
+    items: list[StageItem] = Field(min_length=1, max_length=2)
+    submit_consent: StrictBool = False
+    settings_confirmed: StrictBool = False
+
+
+@router.post("/api/browser/flow/stage/submit")
+async def browser_flow_submit(request: Request, profile: Optional[str] = None):
+    _require_token(request)
+    raw = await request.body()
+    if len(raw) > 65536 or request.headers.get("content-type", "").split(";", 1)[0] != "application/json":
+        raise HTTPException(status_code=422, detail="Invalid Flow submission request")
+    try:
+        body = FlowSubmitRequest.model_validate_json(raw)
+    except ValidationError:
+        raise HTTPException(status_code=422, detail="Invalid Flow submission request")
+    if body.submit_consent is not True or body.settings_confirmed is not True:
+        raise HTTPException(status_code=400, detail="Separate production consent and settings confirmation are required")
+    profile = destructive_profile(profile, "Flow test submission")
+    path = await config_scoped_to_thread(profile, lambda: get_hermes_home() / "hmx-flow-stages.sqlite3")
+    return await submit_flow_stage(StageStore(path), body.stage_id, [item.model_dump() for item in body.items])
 
 
 @router.post("/api/browser/flow/stage")

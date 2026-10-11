@@ -65,9 +65,11 @@ export interface FlowProjectResult {
 
 export interface FlowStageResult {
   state: BrowserConnectionProbe["state"] | "invalid_request" | "target_unavailable" | "project_mismatch"
-    | "composer_blocked" | "composer_not_empty" | "text_staged" | "stage_uncertain" | "attempt_exists";
+    | "composer_blocked" | "composer_not_empty" | "text_staged" | "stage_uncertain" | "attempt_exists"
+    | "text_mismatch" | "agent_not_selected" | "submit_clicked" | "submission_uncertain" | "submission_fenced";
   stage_id?: string;
-  production_submitted: false;
+  production_submitted: false | null;
+  stage_meta?: { target_id: string; project_url: string; item_count: number };
   send_enabled?: boolean;
   checked_at?: string;
 }

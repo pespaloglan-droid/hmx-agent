@@ -277,8 +277,9 @@ checks, grant separate write consent, press **Test metnini yerleştir (gönderme
 once and approve only the corresponding Chrome request. Expected: staged text,
 no production, and a reported send-control state. Show the Flow composer and
 result, but **do not click send manually**. On error/uncertainty, inspect and share
-instead of retrying. Separate production permission, bounded one-shot dispatch,
-asset reconciliation/download and Chat integration are not implemented yet.
+instead of retrying. This staging step never submits. A separately authorized one-click test
+submission is described below; asset reconciliation/download and Chat integration
+are still not implemented.
 
 Validation: 508 web tests, 110 targeted Python tests (isolated Python 3.13),
 TypeScript, changed-file lint and build passed. Native local Chromium exercised
@@ -288,5 +289,65 @@ refusal; submit click count remained zero. Synthetic CDP tests enforce read →
 write → guarded read → detach and prohibit other commands. SQLite tests cover
 concurrent claims, restart fencing, profile isolation and no prompt persistence.
 Desktop/mobile mocked UI fixtures cover independent write consent, one request,
-status-only recovery, disabled repeat action and no horizontal overflow. Actual
-Windows text insertion and Flow's React/editor behavior remain pending acceptance.
+status-only recovery, disabled repeat action and no horizontal overflow. The user subsequently verified actual Windows contenteditable insertion and send
+enabling. They also demonstrated that a visible Agent label does not mean it is
+selected: the selected button has `aria-pressed="true"`.
+
+
+## Separately approved single-click test submission
+
+This is a test dispatch, not a batch executor or a production-success receipt.
+`POST /api/browser/flow/stage/submit` requires session auth, an explicit owning
+Hermes profile, `submit_consent:true`, and `settings_confirmed:true`. It accepts
+only a stored stage UUID and the identical one/two named prompt rows; caller
+URLs, target IDs and script expressions are refused. Schema failures are fixed
+errors without prompt content. Account/model/aspect/x1 settings are confirmed
+by the human, **not programmatically verified**. Cost is unknown; the instructed
+image count is **not a hard output/credit cap**.
+
+The backend rebuilds the original message and checks its SHA-256/count against
+the profile-local record. An unstaged, interrupted, submitted, missing or changed
+record cannot dispatch. Fresh target metadata must match the recorded target and
+project; missing targets never fall back to another tab. A guarded read checks:
+exact origin/project, no query/hash, loaded page, one visible contenteditable
+holding the exact normalized approved message, idle controls, one enabled send
+control and **one visible enabled `flow-agent-mode-toggle-chip button.agent-mode-chip`
+with `aria-pressed="true"`**. Labels, colors and hashed Angular classes cannot
+prove selected Agent mode.
+
+After the read, a SQLite compare-and-swap commits `submission_attempt_started`
+before effectful evaluation. The fixed synchronous expression repeats every
+guard and invokes the unique send control's `.click()` exactly once. There is no
+Enter fallback, rewrite, automatic retry, navigation or account change. A guard
+failure after claim also consumes the attempt. A lost connection/exception or
+process interruption after claim is permanently fenced as uncertain. Concurrent
+and restarted requests cannot claim again. No plaintext prompt is persisted.
+
+`submit_clicked` means only that the synchronous click returned; Flow acceptance,
+completed images, names and spending are not verified. `production_submitted`
+is null for clicked/uncertain results, not a success assertion. The profile-scoped
+read-only status route returns the saved project/target/count and receipt without
+connecting to Chrome. The independent submission card resumes an existing staged
+UUID after a dashboard restart without requiring an empty editor or restaging.
+Two unchecked confirmations and an explicit button click are required. Response
+loss triggers only a status read; the button stays disabled, never resubmitting.
+Reloading the dashboard is not cancellation of an already-started operation.
+
+Windows acceptance: preserve the staged Flow text and selected Agent mode. Update
+and restart **only Hermes/dashboard**. Load the existing stage UUID and identical
+rows in the separate card, read the record, inspect actual account/model/settings
+in Flow, grant both confirmations, and press the Hermes test submission button
+once. Approve only its corresponding Chrome request if asked. Do not click the
+Flow arrow manually, reload Flow or retry on uncertainty. Share both the dashboard
+receipt and Flow progress/results. Live Windows dispatch acceptance remains pending.
+
+Local validation: 517 web tests and 123 targeted Python tests; typecheck,
+changed-file ESLint and production build pass. Synthetic CDP verifies guarded
+read → durable claim → one effect → detach; SQLite verifies atomic concurrency,
+restart fencing, wrong digest/count and separate profile isolation. Native local
+Chromium validates selected/inactive/unknown Agent states, exact text, disabled/
+ambiguous/busy controls, origin/query guards, escaped data and a single click with
+no rewrite. Mocked desktop/mobile UI validates existing-record resume, independent
+permissions, no automatic submission/replay and no horizontal overflow. No real
+Flow request was submitted by these tests. The changed-code health ratchet against the previous head passes using an
+isolated pinned ruff 0.15.10 tool; no Hermes runtime environment was modified.

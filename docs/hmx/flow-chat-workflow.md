@@ -41,13 +41,16 @@ Flow-tab markers, local-only batch draft, exact-project/composer preflight and s
 composer text staging (no submit) are implemented. The user validated Windows transport, Flow workspace markers and
 the two-row local draft. The user manually produced, named and downloaded two
 images through Flow Agent; this was not Hermes automation. The user also verified the Windows project/composer preflight: one empty
-contenteditable and a unique send control. Text staging has local fixture coverage
-and awaits live Windows acceptance. It stores a profile-scoped durable attempt
+contenteditable and a unique send control. The user verified actual Windows text staging and send enabling. A separately
+consented two-row test can now click the recorded project's send control once,
+with exact message/digest matching, selected Agent verification (`aria-pressed=true`)
+and a durable no-resubmission fence. Actual Windows dispatch acceptance is pending.
+A click is not proof of production success; output count and credits are not hard-capped. It stores a profile-scoped durable attempt
 fence without persisting prompts, but is not a generation job tracker.
 
-Production authorization/enforcement, effectful dispatch, account/profile
-mapping, durable job tracking, asset reconciliation, automated download and Chat
-integration are **not implemented**. They must share one execution authority, not
+Beyond this separately approved single-click test, batch execution and hard budget
+enforcement, account/profile mapping, durable job tracking, asset reconciliation,
+automated download and Chat integration are **not implemented**. They must share one execution authority, not
 separate dashboard/Chat implementations. A general plugin/CLI boundary is
 preferred over adding vendor-specific core model tools; respect the repository's
 out-of-tree SaaS-plugin policy. Do not ship a fake production button in the interim.

@@ -239,3 +239,31 @@ def test_stage_validation_never_echoes_private_prompt(client):
     assert "PRIVATE_PROMPT" not in response.text
     response = client.post("/api/browser/flow/stage", headers={**HEADERS, "Content-Type": "application/json"}, content='{"PRIVATE_PROMPT":')
     assert response.status_code == 422 and "PRIVATE_PROMPT" not in response.text
+
+
+def test_submit_requires_auth_two_strict_permissions_and_bound_record_only(client, monkeypatch, tmp_path):
+    import uuid
+    calls = []; scopes = []
+    async def scoped(profile, fn): scopes.append(profile); return fn()
+    async def submit(store, ident, items):
+        calls.append((store.path, ident, items)); return {'state': 'submit_clicked', 'production_submitted': None}
+    monkeypatch.setattr(browser, 'config_scoped_to_thread', scoped)
+    monkeypatch.setattr(browser, 'destructive_profile', lambda profile, route: profile)
+    monkeypatch.setattr(browser, 'get_hermes_home', lambda: tmp_path)
+    monkeypatch.setattr(browser, 'submit_flow_stage', submit)
+    body = {'stage_id': str(uuid.uuid4()), 'items': [{'name': 'hmx_test_x', 'prompt': 'PRIVATE_PROMPT'}],
+            'submit_consent': True, 'settings_confirmed': True}
+    route = '/api/browser/flow/stage/submit?profile=worker'
+    assert client.post(route, json=body).status_code == 401
+    for key in ('submit_consent', 'settings_confirmed'):
+        assert client.post(route, headers=HEADERS, json={**body, key: False}).status_code == 400
+        assert client.post(route, headers=HEADERS, json={**body, key: 'true'}).status_code == 422
+    for key in ('target_id', 'project_url', 'expression'):
+        assert client.post(route, headers=HEADERS, json={**body, key: 'BAD'}).status_code == 422
+    bad = {**body, 'items': [{'name': 'hmx_test_x', 'prompt': 'PRIVATE_PROMPT' * 300}]}
+    response = client.post(route, headers=HEADERS, json=bad)
+    assert response.status_code == 422 and 'PRIVATE_PROMPT' not in response.text
+    assert not calls and not scopes
+    response = client.post(route, headers=HEADERS, json=body)
+    assert response.status_code == 200 and response.json()['production_submitted'] is None
+    assert scopes == ['worker'] and calls[0][0] == tmp_path / 'hmx-flow-stages.sqlite3'

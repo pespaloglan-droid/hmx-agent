@@ -55,6 +55,20 @@ function jsonFetchMock(body: unknown = { ok: true }) {
 }
 
 describe("fetchJSON", () => {
+  it("binds approved submission to the owning profile and sends no caller-selected target", async () => {
+    setManagementProfile("worker");
+    const fetchMock = jsonFetchMock({ state: "submit_clicked", production_submitted: null });
+    vi.stubGlobal("fetch", fetchMock);
+    const items = [{ name: "hmx_test_x", prompt: "Fixture" }];
+    const id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    await api.submitFlowStage(id, items);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/flow/stage/submit?profile=worker");
+    expect((init?.headers as Headers).get(SESSION_HEADER)).toBe("stale-token");
+    expect(JSON.parse(init?.body as string)).toEqual({ stage_id: id, items, submit_consent: true, settings_confirmed: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("binds composer staging and durable status to the selected Hermes profile", async () => {
     setManagementProfile("worker");
     const fetchMock = jsonFetchMock({ state: "text_staged", production_submitted: false });

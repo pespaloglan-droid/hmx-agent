@@ -7,7 +7,7 @@ import type { FlowStageResult } from "@/lib/api-browser";
 interface Props { targetId: string; projectUrl: string; items: ImageDraftItem[] }
 const copy = {
   tr: {
-    title: "Test metnini Flow'a yerleştir — gönderim yok", scope: "Bu adım boş Agent alanına metin yazar, gönderme düğmesine basmaz. Üretim veya indirme yapmaz. Gönderim ayrı bir adım olacak; henüz uygulanmadı.",
+    title: "Test metnini Flow'a yerleştir — gönderim yok", scope: "Bu adım boş Agent alanına metin yazar, gönderme düğmesine basmaz. Üretim veya indirme yapmaz. Gönderim yalnız ayrı üretim onay kartından başlatılabilir.",
     consent: "Bu test metninin seçili projedeki boş Agent alanına yazılmasına izin veriyorum; üretime gönderilmesine değil.",
     limit: "İlk yazma testi en fazla 2 prompt kabul eder; promptlar en fazla 3000 karakter olmalı. Yeni test isimleri hmx_test_ ile başlamalı (örnek: hmx_test_003_sahil, hmx_test_004_orman). Yukarıdaki listeyi düzenleyip taslak ve proje kontrolünü tekrar yapın.",
     record: "Deneme kaydı aktif Hermes profilinde yerel tutulur: proje, sekme ve metnin özeti (SHA-256); prompt metni kaydedilmez. Aynı metin/proje denemesi yeniden yazılmaz. Yenileme, başlamış yazma işlemini iptal etmez.",
@@ -16,7 +16,7 @@ const copy = {
     duplicate: "Bu deneme daha önce kaydedilmiş. Yeniden yazma yapılmadı. Önce Flow'daki alanı kontrol edin.", id: "Deneme kimliği", send: "Gönderme kontrolü etkin", yes: "Evet", no: "Hayır",
   },
   en: {
-    title: "Stage test text in Flow — no submission", scope: "Writes text into the empty Agent composer without pressing send. No production or download. Submission is a separate step and is not implemented yet.",
+    title: "Stage test text in Flow — no submission", scope: "Writes text into the empty Agent composer without pressing send. No production or download. Submission can only start from the separate production consent card.",
     consent: "Allow writing this test text into the selected project's empty Agent composer, not submitting it for production.",
     limit: "The first writing test accepts at most 2 prompts, each up to 3000 characters. Use new names beginning hmx_test_ (e.g. hmx_test_003_coast, hmx_test_004_forest). Edit the list and repeat draft/project checks.",
     record: "A local attempt record lives in the active Hermes profile: project, tab and SHA-256 text digest, not the prompt text. The same project/text attempt is not written twice. Refresh does not cancel an already-started write.",
