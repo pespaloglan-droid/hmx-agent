@@ -12,6 +12,7 @@ from hermes_cli.browser_flow_check import check_flow_tab, list_flow_tabs
 from hermes_cli.browser_flow_project import check_flow_project
 from hermes_cli.browser_flow_stage import StageStore, stage_flow_text
 from hermes_cli.browser_flow_submit import submit_flow_stage
+from hermes_cli.browser_flow_agent import inspect_flow_stage_agent
 from hermes_constants import get_hermes_home
 from hermes_cli.web_deps import late
 from hermes_cli.web_routers._common import config_scoped_to_thread, destructive_profile
@@ -58,6 +59,27 @@ class FlowSubmitRequest(BaseModel):
     items: list[StageItem] = Field(min_length=1, max_length=2)
     submit_consent: StrictBool = False
     settings_confirmed: StrictBool = False
+
+
+class FlowAgentRequest(ProbeConsent):
+    stage_id: str = Field(min_length=36, max_length=36)
+
+
+@router.post("/api/browser/flow/stage/agent-check")
+async def browser_flow_agent_check(request: Request, profile: Optional[str] = None):
+    _require_token(request)
+    raw = await request.body()
+    if len(raw) > 2048 or request.headers.get("content-type", "").split(";", 1)[0] != "application/json":
+        raise HTTPException(status_code=422, detail="Invalid Agent diagnostic request")
+    try:
+        body = FlowAgentRequest.model_validate_json(raw)
+    except ValidationError:
+        raise HTTPException(status_code=422, detail="Invalid Agent diagnostic request")
+    if body.consent is not True:
+        raise HTTPException(status_code=400, detail="Read-only Agent diagnostic consent is required")
+    profile = destructive_profile(profile, "Flow Agent diagnostic")
+    path = await config_scoped_to_thread(profile, lambda: get_hermes_home() / "hmx-flow-stages.sqlite3")
+    return await inspect_flow_stage_agent(StageStore(path), body.stage_id)
 
 
 @router.post("/api/browser/flow/stage/submit")

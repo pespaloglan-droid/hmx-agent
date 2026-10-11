@@ -377,3 +377,27 @@ identical rows. If the durable state is not `text_staged`, do not create a new U
 to bypass a fence. Only explicit renewed production consent can trigger another
 submission request, and the durable compare-and-swap still permits at most one
 effectful send-control evaluation for a stage.
+
+
+### Read-only Agent predicate diagnostic
+
+The real Windows submission remains blocked with `agent_not_selected` after a confirmed
+backend restart at `3ff18ba8`, despite a screenshot of the selected chip. The parent-selector
+regression test was not proof that this live issue was resolved. Do not repeat submissions,
+clear the Flow composer, or replace the staged record to diagnose this.
+
+For an existing stage ID, the submit card now offers **Agent düğmesi tanısı — salt okunur**.
+A fresh diagnostic-only checkbox plus **Agent durumunu oku (gönderme yok)** sends the ID
+and explicit consent, not prompt text, target, URL or JavaScript. The protected, profile-scoped
+endpoint resolves the saved target/project. One fixed evaluation with `throwOnSideEffect:true`
+reports matched/visible/selected-visible counts, the unique button's enabled state and a
+closed `aria-pressed` enum. It reads no prompt, writes no composer text, clicks nothing,
+and never changes the stage ledger or rearms submission fences. It does not verify account,
+model, output count or production acceptance. If the Chrome read is blocked, it reports that
+failure instead of falling back to an effect-enabled evaluation.
+
+The existing one-button + enabled + `aria-pressed=true` submission guard remains unchanged;
+its selector/visibility predicate is shared with diagnostics. Native local Chromium tests
+exercise the read-only CDP evaluation and check that prompt text and click counts stay unchanged.
+The user must share the diagnostic result to identify the live failing predicate. This is a
+diagnostic addition, not a claimed fix for the remaining Windows submission issue.

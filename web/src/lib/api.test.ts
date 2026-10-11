@@ -55,6 +55,19 @@ function jsonFetchMock(body: unknown = { ok: true }) {
 }
 
 describe("fetchJSON", () => {
+  it("binds read-only Agent diagnostics to the owning profile without prompt or target input", async () => {
+    setManagementProfile("worker");
+    const fetchMock = jsonFetchMock({ state: "agent_selected", production_authorized: false });
+    vi.stubGlobal("fetch", fetchMock);
+    const id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    await api.checkFlowStageAgent(id);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/flow/stage/agent-check?profile=worker");
+    expect((init?.headers as Headers).get(SESSION_HEADER)).toBe("stale-token");
+    expect(JSON.parse(init?.body as string)).toEqual({ stage_id: id, consent: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("binds approved submission to the owning profile and sends no caller-selected target", async () => {
     setManagementProfile("worker");
     const fetchMock = jsonFetchMock({ state: "submit_clicked", production_submitted: null });

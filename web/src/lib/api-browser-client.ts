@@ -1,4 +1,4 @@
-import type { BrowserConfigurationStatus, BrowserConnectionProbe, BrowserFlowResult, FlowProjectResult, FlowStageResult, BrowserInventory } from "./api-browser";
+import type { BrowserConfigurationStatus, BrowserConnectionProbe, BrowserFlowResult, FlowProjectResult, FlowStageResult, FlowAgentResult, BrowserInventory } from "./api-browser";
 
 // Profile resolution stays late-bound at each explicit action, not at module load.
 export function browserApi(fetchJSON: <T>(url: string, init?: RequestInit) => Promise<T>, profilePath: (url: string) => string) {
@@ -16,6 +16,11 @@ export function browserApi(fetchJSON: <T>(url: string, init?: RequestInit) => Pr
       }),
     getFlowStageStatus: (stageId: string) =>
       fetchJSON<FlowStageResult>(profilePath(`/api/browser/flow/stage/${encodeURIComponent(stageId)}`)),
+    checkFlowStageAgent: (stageId: string) =>
+      fetchJSON<FlowAgentResult>(profilePath("/api/browser/flow/stage/agent-check"), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage_id: stageId, consent: true }),
+      }),
     submitFlowStage: (stageId: string, items: { name: string; prompt: string }[]) =>
       fetchJSON<FlowStageResult>(profilePath("/api/browser/flow/stage/submit"), {
         method: "POST", headers: { "Content-Type": "application/json" },

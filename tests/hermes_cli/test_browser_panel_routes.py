@@ -267,3 +267,27 @@ def test_submit_requires_auth_two_strict_permissions_and_bound_record_only(clien
     response = client.post(route, headers=HEADERS, json=body)
     assert response.status_code == 200 and response.json()['production_submitted'] is None
     assert scopes == ['worker'] and calls[0][0] == tmp_path / 'hmx-flow-stages.sqlite3'
+
+
+def test_agent_diagnostic_requires_auth_strict_consent_and_profile_bound_id(client, monkeypatch, tmp_path):
+    import uuid
+    calls = []; scopes = []
+    async def scoped(profile, fn): scopes.append(profile); return fn()
+    async def inspect(store, ident):
+        calls.append((store.path, ident)); return {'state': 'agent_selected', 'production_authorized': False}
+    monkeypatch.setattr(browser, 'config_scoped_to_thread', scoped)
+    monkeypatch.setattr(browser, 'destructive_profile', lambda profile, route: profile)
+    monkeypatch.setattr(browser, 'get_hermes_home', lambda: tmp_path)
+    monkeypatch.setattr(browser, 'inspect_flow_stage_agent', inspect)
+    body = {'stage_id': str(uuid.uuid4()), 'consent': True}
+    route = '/api/browser/flow/stage/agent-check?profile=worker'
+    assert client.post(route, json=body).status_code == 401
+    assert client.post(route, headers=HEADERS, json={**body, 'consent': False}).status_code == 400
+    assert client.post(route, headers=HEADERS, json={**body, 'consent': 'true'}).status_code == 422
+    for key in ('target_id', 'project_url', 'expression', 'prompt'):
+        response = client.post(route, headers=HEADERS, json={**body, key: 'PRIVATE_PROMPT'})
+        assert response.status_code == 422 and 'PRIVATE_PROMPT' not in response.text
+    assert not scopes and not calls
+    response = client.post(route, headers=HEADERS, json=body)
+    assert response.status_code == 200 and response.json()['production_authorized'] is False
+    assert scopes == ['worker'] and calls == [(tmp_path / 'hmx-flow-stages.sqlite3', body['stage_id'])]

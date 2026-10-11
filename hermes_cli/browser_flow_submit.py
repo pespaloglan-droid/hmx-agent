@@ -10,6 +10,7 @@ import uuid
 from hermes_cli.browser_connection_probe import run_browser_probe, _QUIET_CDP_LOGGER
 from hermes_cli.browser_flow_check import TARGET_ID, _CDP
 from hermes_cli.browser_flow_project import canonical_project
+from hermes_cli.browser_flow_agent import AGENT_MARKERS
 from hermes_cli.browser_flow_stage import StageStore, build_stage_message
 
 # Both evaluations execute the same synchronous guards. No editor rewriting,
@@ -25,7 +26,7 @@ SUBMIT_EXPRESSION = r"""(() => {
   const editors = Array.from(document.querySelectorAll('textarea,[contenteditable="true"]')).filter(el=>visible(el) && enabled(el) && !el.readOnly);
   if (editors.length !== 1 || editors[0].tagName === 'TEXTAREA') return {state:'composer_blocked'};
   if ((editors[0].innerText || '').replace(/\r\n/g,'\n').trim() !== APPROVED_MESSAGE) return {state:'text_mismatch'};
-  const agents = Array.from(document.querySelectorAll('button.agent-mode-chip')).filter(visible);
+  AGENT_CHECK
   if (agents.length !== 1 || !enabled(agents[0]) || agents[0].getAttribute('aria-pressed') !== 'true') return {state:'agent_not_selected'};
   const buttons = Array.from(document.querySelectorAll('button,[role="button"]')).filter(visible);
   const label = el => (el.innerText || '').replace(/\s+/g,' ').trim();
@@ -45,7 +46,7 @@ def submit_expression(project: str, message: str, *, click: bool = False) -> str
     action = "send[0].click(); return {state:'submit_clicked'};" if click else "return {state:'submit_ready'};"
     # Message LAST prevents literal placeholder words in user data becoming code.
     return SUBMIT_EXPRESSION.replace("EXPECTED_PROJECT", json.dumps(canonical.rsplit("/", 1)[1])).replace(
-        "SUBMIT_ACTION", action).replace("APPROVED_MESSAGE", json.dumps(message, ensure_ascii=True))
+        "SUBMIT_ACTION", action).replace("AGENT_CHECK", AGENT_MARKERS).replace("APPROVED_MESSAGE", json.dumps(message, ensure_ascii=True))
 
 
 def reply_state(reply: dict, allowed: set[str], fallback: str) -> str:

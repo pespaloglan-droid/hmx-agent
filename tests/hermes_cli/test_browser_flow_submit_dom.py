@@ -6,6 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 from hermes_platform.resolver import locate_command
+from hermes_cli.browser_flow_agent import agent_expression
 from hermes_cli.browser_flow_stage import build_stage_message
 from hermes_cli.browser_flow_submit import submit_expression
 
@@ -57,7 +58,7 @@ def test_observed_selected_button_does_not_require_a_custom_wrapper(tmp_path):
     if not command or not node:
         pytest.skip('Native Chromium/Node is not installed; synthetic CDP tests still run')
     package = subprocess.run([*node, '-p', "require.resolve('playwright')"],
-                             capture_output=True, text=True, timeout=10)
+                             capture_output=True, text=True, timeout=10, check=False)
     if package.returncode:
         pytest.skip('Optional native DOM fixture needs the Playwright Node package')
     class Handler(BaseHTTPRequestHandler):
@@ -79,11 +80,21 @@ def test_observed_selected_button_does_not_require_a_custom_wrapper(tmp_path):
           try {
             const page = await browser.newPage();
             await page.goto(process.argv[1]);
+            const cdp = await page.context().newCDPSession(page);
+            const before = await page.evaluate(() => ({clicks:window.clicks, text:document.querySelector('#editor').innerText}));
+            const diagnostic = await cdp.send('Runtime.evaluate', {
+              expression:process.argv[4], returnByValue:true, throwOnSideEffect:true, timeout:5000});
+            require('node:assert/strict').equal(diagnostic.exceptionDetails, undefined);
+            require('node:assert/strict').equal(diagnostic.result.value.markers.agent_pressed, 'true');
+            require('node:assert/strict').equal(diagnostic.result.value.markers.agent_visible_count, 1);
+            const after = await page.evaluate(() => ({clicks:window.clicks, text:document.querySelector('#editor').innerText}));
+            require('node:assert/strict').deepEqual(after, before);
             console.log(await page.locator('#results').innerText());
           } finally { await browser.close(); }
         })().then(() => process.exit(0)).catch(() => process.exit(1));"""
         result = subprocess.run([*node, '-e', script,
-            origin + '/project/11111111-2222-3333-4444-555555555555', command[0], package.stdout.strip()],
+            origin + '/project/11111111-2222-3333-4444-555555555555', command[0], package.stdout.strip(),
+            agent_expression(URL).replace('https://flow.google.com', origin)],
             capture_output=True, text=True, encoding='utf-8', timeout=30, check=True)
         actual = json.loads(result.stdout)
         assert actual == {

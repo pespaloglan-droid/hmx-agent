@@ -83,13 +83,14 @@ def project_result(reply: dict) -> dict:
             "account_verified": False, "production_authorized": False}
 
 
-async def inspect_project_endpoint(endpoint: str, target_id: str, project: str) -> dict:
+async def inspect_project_endpoint(endpoint: str, target_id: str, project: str, *,
+                                   expression: str | None = None, read_result=project_result) -> dict:
     try:
         from websockets.asyncio.client import connect
     except ImportError:
         return {"state": "dependency_missing"}
     try:
-        expression = project_expression(project)
+        expression = project_expression(project) if expression is None else expression
         async with asyncio.timeout(75):
             async with connect(endpoint, proxy=None, open_timeout=60, close_timeout=1,
                                max_size=262144, ping_interval=None, logger=_QUIET_CDP_LOGGER,
@@ -110,7 +111,7 @@ async def inspect_project_endpoint(endpoint: str, target_id: str, project: str) 
                 try:
                     reply = await cdp.call("Runtime.evaluate", {"expression": expression, "returnByValue": True,
                                                                "throwOnSideEffect": True, "timeout": 5000}, session=session)
-                    return project_result(reply)
+                    return read_result(reply)
                 finally:
                     await cdp.call("Target.detachFromTarget", {"sessionId": session})
     except TimeoutError:

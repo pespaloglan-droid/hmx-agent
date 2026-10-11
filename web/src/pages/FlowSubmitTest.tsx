@@ -1,3 +1,4 @@
+import FlowAgentCheck from "./FlowAgentCheck";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@nous-research/ui/ui/components/button";
 import { api } from "@/lib/api";
@@ -102,6 +103,7 @@ export default function FlowSubmitTest() {
     <label className="block space-y-1"><span>{text.id}</span><input aria-label={text.id} value={id} disabled={busy || attempted}
       className="w-full min-w-0 rounded border border-border bg-transparent p-2"
       onChange={event => { setId(event.target.value.trim()); resetReview(); }} /></label>
+    {validId && <FlowAgentCheck key={id} stageId={id} />}
     <label className="block space-y-1"><span>{text.rows}</span><textarea aria-label={text.rows} value={source}
       disabled={busy || attempted} className="w-full min-w-0 rounded border border-border bg-transparent p-2" rows={4}
       onChange={event => { setSource(event.target.value); resetReview(); }} /></label>

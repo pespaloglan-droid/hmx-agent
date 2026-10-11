@@ -73,3 +73,16 @@ export interface FlowStageResult {
   send_enabled?: boolean;
   checked_at?: string;
 }
+
+export interface FlowAgentResult {
+  state: string;
+  production_authorized: false;
+  stage_id?: string;
+  markers?: {
+    agent_total_count: number;
+    agent_visible_count: number;
+    agent_selected_visible_count: number;
+    agent_enabled: boolean;
+    agent_pressed: "true" | "false" | "unknown" | "none";
+  };
+}
