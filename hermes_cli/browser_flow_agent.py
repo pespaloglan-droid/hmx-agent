@@ -88,7 +88,8 @@ def agent_result(reply: dict) -> dict:
     return {**base, 'state': _agent_state(markers), 'markers': markers}
 
 
-async def inspect_flow_stage_agent(store: StageStore, stage_id: str) -> dict:
+async def inspect_flow_stage_agent(store: StageStore, stage_id: str, *,
+                                   current_target_id: str | None = None) -> dict:
     base = {'production_authorized': False}
     try:
         if str(uuid.UUID(stage_id)) != stage_id:
@@ -99,10 +100,11 @@ async def inspect_flow_stage_agent(store: StageStore, stage_id: str) -> dict:
     if record is None:
         return {**base, 'state': 'not_found'}
     project = canonical_project(record['project'])
-    if project is None or not TARGET_ID.fullmatch(record['target']):
+    target = record['target'] if current_target_id is None else current_target_id
+    if project is None or not isinstance(target, str) or not TARGET_ID.fullmatch(target):
         return {**base, 'state': 'invalid_request'}
     async def check(endpoint):
-        return await inspect_project_endpoint(endpoint, record['target'], project,
+        return await inspect_project_endpoint(endpoint, target, project,
                                               expression=agent_expression(project), read_result=agent_result)
     result = await run_browser_probe(check=check)
     return {**result, **base, 'stage_id': stage_id}

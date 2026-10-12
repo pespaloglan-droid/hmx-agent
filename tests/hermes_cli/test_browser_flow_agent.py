@@ -86,3 +86,49 @@ def test_read_only_wire_and_ledger_preserved(tmp_path, monkeypatch, state):
     asyncio.run(scenario())
     assert store.lookup(ident) == before
     assert b'PRIVATE_PROMPT' not in store.path.read_bytes()
+
+
+def test_current_selection_is_diagnostic_only_and_preserves_saved_binding(tmp_path, monkeypatch):
+    store = StageStore(tmp_path / 'stage.db'); ident = str(uuid.uuid4())
+    message = build_stage_message([{'name': 'hmx_test_a', 'prompt': 'PRIVATE_PROMPT'}])
+    store.claim(ident, 'closed-tab', URL, message, 1)
+    store.finish(ident, {'state': 'submission_uncertain', 'production_submitted': None})
+    before = store.lookup(ident); calls = []
+    async def read(endpoint, target, project, *, expression, read_result):
+        calls.append((target, project))
+        assert expression == agent.agent_expression(URL)
+        return read_result({'result': {'value': {'project_match': True, 'markers': MARKERS}}})
+    async def probe(*, check): return await check('test-endpoint')
+    monkeypatch.setattr(agent, 'inspect_project_endpoint', read)
+    monkeypatch.setattr(agent, 'run_browser_probe', probe)
+    result = asyncio.run(agent.inspect_flow_stage_agent(store, ident, current_target_id='current-tab'))
+    assert result['state'] == 'agent_selected' and result['production_authorized'] is False
+    assert calls == [('current-tab', URL)]
+    assert store.lookup(ident) == before
+    assert asyncio.run(agent.inspect_flow_stage_agent(store, ident, current_target_id='bad/id'))['state'] == 'invalid_request'
+    assert asyncio.run(agent.inspect_flow_stage_agent(store, str(uuid.uuid4()), current_target_id='current-tab'))['state'] == 'not_found'
+    assert calls == [('current-tab', URL)]
+
+
+def test_current_target_different_project_is_refused_before_reading_dom(tmp_path, monkeypatch):
+    store = StageStore(tmp_path / 'stage.db'); ident = str(uuid.uuid4())
+    store.claim(ident, 'closed-tab', URL, 'fixture', 1)
+    before = store.lookup(ident)
+    async def scenario():
+        from websockets.asyncio.server import serve
+        commands = []
+        async def handler(socket):
+            async for raw in socket:
+                call = json.loads(raw); commands.append(call['method'])
+                assert call['method'] == 'Target.getTargets'
+                result = {'targetInfos': [{'type': 'page', 'targetId': 'current-tab',
+                                         'url': URL.replace('11111111', '99999999')}]}
+                await socket.send(json.dumps({'id': call['id'], 'result': result}))
+        async with serve(handler, '127.0.0.1', 0) as server:
+            async def probe(*, check): return await check(f'ws://127.0.0.1:{server.sockets[0].getsockname()[1]}')
+            monkeypatch.setattr(agent, 'run_browser_probe', probe)
+            result = await agent.inspect_flow_stage_agent(store, ident, current_target_id='current-tab')
+        assert result['state'] == 'project_mismatch' and result['production_authorized'] is False
+        assert commands == ['Target.getTargets']
+    asyncio.run(scenario())
+    assert store.lookup(ident) == before

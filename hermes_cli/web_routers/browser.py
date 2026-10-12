@@ -63,6 +63,7 @@ class FlowSubmitRequest(BaseModel):
 
 class FlowAgentRequest(ProbeConsent):
     stage_id: str = Field(min_length=36, max_length=36)
+    current_target_id: str | None = Field(default=None, min_length=1, max_length=128, pattern=r"^[A-Za-z0-9-]+$")
 
 
 @router.post("/api/browser/flow/stage/agent-check")
@@ -79,7 +80,9 @@ async def browser_flow_agent_check(request: Request, profile: Optional[str] = No
         raise HTTPException(status_code=400, detail="Read-only Agent diagnostic consent is required")
     profile = destructive_profile(profile, "Flow Agent diagnostic")
     path = await config_scoped_to_thread(profile, lambda: get_hermes_home() / "hmx-flow-stages.sqlite3")
-    return await inspect_flow_stage_agent(StageStore(path), body.stage_id)
+    if body.current_target_id is None:
+        return await inspect_flow_stage_agent(StageStore(path), body.stage_id)
+    return await inspect_flow_stage_agent(StageStore(path), body.stage_id, current_target_id=body.current_target_id)
 
 
 @router.post("/api/browser/flow/stage/submit")

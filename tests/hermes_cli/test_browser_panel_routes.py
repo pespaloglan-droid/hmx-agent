@@ -258,7 +258,7 @@ def test_submit_requires_auth_two_strict_permissions_and_bound_record_only(clien
     for key in ('submit_consent', 'settings_confirmed'):
         assert client.post(route, headers=HEADERS, json={**body, key: False}).status_code == 400
         assert client.post(route, headers=HEADERS, json={**body, key: 'true'}).status_code == 422
-    for key in ('target_id', 'project_url', 'expression'):
+    for key in ('target_id', 'current_target_id', 'project_url', 'expression'):
         assert client.post(route, headers=HEADERS, json={**body, key: 'BAD'}).status_code == 422
     bad = {**body, 'items': [{'name': 'hmx_test_x', 'prompt': 'PRIVATE_PROMPT' * 300}]}
     response = client.post(route, headers=HEADERS, json=bad)
@@ -291,3 +291,25 @@ def test_agent_diagnostic_requires_auth_strict_consent_and_profile_bound_id(clie
     response = client.post(route, headers=HEADERS, json=body)
     assert response.status_code == 200 and response.json()['production_authorized'] is False
     assert scopes == ['worker'] and calls == [(tmp_path / 'hmx-flow-stages.sqlite3', body['stage_id'])]
+
+
+def test_current_agent_diagnostic_has_explicit_bounded_target_but_no_caller_project(client, monkeypatch, tmp_path):
+    import uuid
+    calls = []
+    async def scoped(profile, fn): return fn()
+    async def inspect(store, ident, *, current_target_id):
+        calls.append((ident, current_target_id)); return {'state': 'agent_selected', 'production_authorized': False}
+    monkeypatch.setattr(browser, 'config_scoped_to_thread', scoped)
+    monkeypatch.setattr(browser, 'destructive_profile', lambda profile, route: profile)
+    monkeypatch.setattr(browser, 'get_hermes_home', lambda: tmp_path)
+    monkeypatch.setattr(browser, 'inspect_flow_stage_agent', inspect)
+    body = {'stage_id': str(uuid.uuid4()), 'consent': True, 'current_target_id': 'selected-tab'}
+    route = '/api/browser/flow/stage/agent-check?profile=worker'
+    assert client.post(route, json=body).status_code == 401
+    assert client.post(route, headers=HEADERS, json={**body, 'consent': False}).status_code == 400
+    for value in ('bad/id', '', 'a' * 129):
+        assert client.post(route, headers=HEADERS, json={**body, 'current_target_id': value}).status_code == 422
+    assert client.post(route, headers=HEADERS, json={**body, 'project_url': 'PRIVATE'}).status_code == 422
+    assert not calls
+    assert client.post(route, headers=HEADERS, json=body).json()['production_authorized'] is False
+    assert calls == [(body['stage_id'], 'selected-tab')]

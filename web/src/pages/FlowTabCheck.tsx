@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type { BrowserFlowResult } from "@/lib/api-browser";
 import { useI18n } from "@/i18n";
 import FlowImageDraft from "./FlowImageDraft";
+import FlowCurrentAgentCheck from "./FlowCurrentAgentCheck";
 
 const copy = {
   tr: {
@@ -137,8 +138,10 @@ export default function FlowTabCheck() {
       </div>
       <p className="text-sm text-muted-foreground">{text.scope}</p>
     </CardContent></Card>
-      {observed && consent && selected && !busy && <FlowImageDraft key={selected}
-        targetId={selected} targetLabel={targets.find((tab) => tab.id === selected)?.label || text.tab} />}
+      {observed && consent && selected && !busy && <div key={selected} className="space-y-4">
+        <FlowCurrentAgentCheck targetId={selected} />
+        <FlowImageDraft targetId={selected} targetLabel={targets.find((tab) => tab.id === selected)?.label || text.tab} />
+      </div>}
     </div>
   );
 }

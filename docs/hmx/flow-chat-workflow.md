@@ -78,3 +78,24 @@ its selector/visibility predicate is shared with diagnostics. Native local Chrom
 exercise the read-only CDP evaluation and check that prompt text and click counts stay unchanged.
 The user must share the diagnostic result to identify the live failing predicate. This is a
 diagnostic addition, not a claimed fix for the remaining Windows submission issue.
+
+
+### Diagnostic-only current tab selection after a Chrome restart
+
+A stored attempt is bound to its original Chrome target. Reopening Chrome can retire that
+identifier: `target_unavailable` is not evidence of inactive Agent mode. A fresh tab-list
+selection does not rewrite the saved binding. Under the read-only Flow tab check, an observed
+current tab (including an inconclusive session read) now exposes **Yeniden açılan sekmede Agent
+tanısı — gönderim yok**. Enter the existing attempt ID, then grant fresh diagnostic consent.
+
+Only this diagnostic request may carry a bounded `current_target_id`. The owning profile's
+saved record supplies the expected project; an absent record or different project is refused.
+The server reads the explicitly selected target with the same fixed, side-effect-blocked Agent
+evaluation. It never automatically chooses a replacement target. The saved target, state,
+digest and submission fences are unchanged. The production-submit endpoint still rejects
+caller-selected targets and only uses the original saved binding. An empty composer remains
+empty, and successful Agent diagnostics do not make the old staged text eligible to submit.
+
+After updating, keep the existing HERMES_HOME selected in the dashboard PowerShell, refresh
+only Hermes, list/check/select the current Flow tab again, and use the new diagnostic-only
+panel. Do not reload Flow, restage text, or repeat production approval to perform this read.

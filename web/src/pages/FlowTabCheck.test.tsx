@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FlowTabCheck from "./FlowTabCheck";
 
-const mocks = vi.hoisted(() => ({ listFlowTabs: vi.fn(), checkFlowTab: vi.fn() }));
+const mocks = vi.hoisted(() => ({ listFlowTabs: vi.fn(), checkFlowTab: vi.fn(), checkFlowStageAgent: vi.fn() }));
 vi.mock("@/lib/api", () => ({ api: mocks }));
 vi.mock("@/i18n", () => ({ useI18n: () => ({ locale: "tr" }) }));
 vi.mock("@nous-research/ui/ui/components/button", () => ({
@@ -41,6 +41,18 @@ afterEach(async () => {
 });
 
 describe("Flow target selection", () => {
+  it("offers current-tab diagnostics after an inconclusive read and clears them when selection changes", async () => {
+    mocks.checkFlowTab.mockResolvedValue({ state: "inconclusive" });
+    await discover();
+    await click(container.querySelectorAll('input[name="flow-target"]')[0]);
+    await click(button("Seçili Flow sekmesini kontrol et"));
+    expect(container.textContent).toContain("Yeniden açılan sekmede Agent tanısı — gönderim yok");
+    expect(mocks.checkFlowStageAgent).not.toHaveBeenCalled();
+    await click(container.querySelectorAll('input[name="flow-target"]')[1]);
+    expect(container.textContent).not.toContain("Yeniden açılan sekmede Agent tanısı — gönderim yok");
+    expect(mocks.checkFlowStageAgent).not.toHaveBeenCalled();
+  });
+
   it("does not read tabs on mount or consent alone", async () => {
     await act(async () => root.render(<FlowTabCheck />));
     expect(button("Açık Flow sekmelerini bul").disabled).toBe(true);

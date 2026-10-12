@@ -16,10 +16,10 @@ export function browserApi(fetchJSON: <T>(url: string, init?: RequestInit) => Pr
       }),
     getFlowStageStatus: (stageId: string) =>
       fetchJSON<FlowStageResult>(profilePath(`/api/browser/flow/stage/${encodeURIComponent(stageId)}`)),
-    checkFlowStageAgent: (stageId: string) =>
+    checkFlowStageAgent: (stageId: string, currentTargetId?: string) =>
       fetchJSON<FlowAgentResult>(profilePath("/api/browser/flow/stage/agent-check"), {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stage_id: stageId, consent: true }),
+        body: JSON.stringify({ stage_id: stageId, consent: true, current_target_id: currentTargetId }),
       }),
     submitFlowStage: (stageId: string, items: { name: string; prompt: string }[]) =>
       fetchJSON<FlowStageResult>(profilePath("/api/browser/flow/stage/submit"), {
