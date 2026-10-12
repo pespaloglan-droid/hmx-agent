@@ -8,6 +8,7 @@ import { useProfileScope } from "@/contexts/useProfileScope";
 import { useI18n } from "@/i18n";
 import BrowserConnectionTest from "./BrowserConnectionTest";
 import FlowTabCheck from "./FlowTabCheck";
+import BrowserConnectorPanel from "./BrowserConnectorPanel";
 import FlowSubmitTest from "./FlowSubmitTest";
 
 const copy = {
@@ -178,6 +179,7 @@ function BrowserPanel({ profile }: { profile: string }) {
       </Card>
 
       <BrowserConnectionTest />
+      <BrowserConnectorPanel />
       <FlowTabCheck />
       <FlowSubmitTest />
 

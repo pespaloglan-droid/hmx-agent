@@ -17,7 +17,10 @@ from hermes_constants import get_hermes_home
 from hermes_cli.web_deps import late
 from hermes_cli.web_routers._common import config_scoped_to_thread, destructive_profile
 
+from hermes_cli.web_routers.browser_connector import router as connector_router
+
 router = APIRouter()
+router.include_router(connector_router)
 _require_token = late("_require_token")
 load_config = late("load_config", "hermes_cli.config")
 

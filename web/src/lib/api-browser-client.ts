@@ -1,8 +1,10 @@
+import { connectorApi } from "./api-browser-connector";
 import type { BrowserConfigurationStatus, BrowserConnectionProbe, BrowserFlowResult, FlowProjectResult, FlowStageResult, FlowAgentResult, BrowserInventory } from "./api-browser";
 
 // Profile resolution stays late-bound at each explicit action, not at module load.
 export function browserApi(fetchJSON: <T>(url: string, init?: RequestInit) => Promise<T>, profilePath: (url: string) => string) {
   return {
+    ...connectorApi(fetchJSON, profilePath),
     listFlowTabs: () =>
       fetchJSON<BrowserFlowResult>("/api/browser/flow/tabs", {
         method: "POST", headers: { "Content-Type": "application/json" },
