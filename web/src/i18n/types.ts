@@ -93,6 +93,13 @@ export interface Translations {
       stopped: string;
     };
     nav: {
+      /** Optional — older locales retain the English fallback. */
+      channels?: string;
+      files?: string;
+      pairing?: string;
+      system?: string;
+      webhooks?: string;
+      browser?: string;
       analytics: string;
       chat: string;
       config: string;

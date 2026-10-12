@@ -1,10 +1,12 @@
 import type { Translations } from "@/i18n/types";
+import { en } from "@/i18n/en";
 
 const BUILTIN: Record<string, keyof Translations["app"]["nav"]> = {
   "/chat": "chat",
   "/sessions": "sessions",
   "/analytics": "analytics",
   "/models": "models",
+  "/browser": "browser",
   "/logs": "logs",
   "/cron": "cron",
   "/skills": "skills",
@@ -13,18 +15,18 @@ const BUILTIN: Record<string, keyof Translations["app"]["nav"]> = {
   "/config": "config",
   "/env": "keys",
   "/docs": "documentation",
+  "/files": "files",
+  "/channels": "channels",
+  "/webhooks": "webhooks",
+  "/pairing": "pairing",
+  "/system": "system",
 };
 
 // Built-in routes without an i18n nav key. Keep these in sync with the
 // sidebar labels in App.tsx — the naive capitalize fallback below mangles
 // initialisms ("/mcp" → "Mcp") and can't match multi-word labels.
 const BUILTIN_LITERAL: Record<string, string> = {
-  "/files": "Files",
   "/mcp": "MCP",
-  "/channels": "Channels",
-  "/webhooks": "Webhooks",
-  "/pairing": "Pairing",
-  "/system": "System",
 };
 
 export function resolvePageTitle(
@@ -42,7 +44,7 @@ export function resolvePageTitle(
   }
   const key = BUILTIN[normalized];
   if (key) {
-    return t.app.nav[key];
+    return t.app.nav[key] ?? en.app.nav[key] ?? t.app.webUi;
   }
   const literal = BUILTIN_LITERAL[normalized];
   if (literal) {

@@ -1,0 +1,315 @@
+"""Real router requests with isolated auth/config seams (not a full agent run)."""
+
+import pytest
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
+
+from hermes_cli.web_routers import browser
+
+
+@pytest.fixture
+def client(monkeypatch):
+    def require_token(request):
+        if request.headers.get("X-Hermes-Session-Token") != "test-session":
+            raise HTTPException(status_code=401)
+
+    monkeypatch.setattr(browser, "_require_token", require_token)
+    app = FastAPI()
+    app.include_router(browser.router)
+    with TestClient(app) as client:
+        yield client
+
+
+HEADERS = {"X-Hermes-Session-Token": "test-session"}
+
+
+def test_discovery_requires_auth_before_reading(client, monkeypatch):
+    monkeypatch.setattr(browser, "discover_browsers", lambda **kwargs: pytest.fail("must not discover"))
+    assert client.post("/api/browser/discover", json={"consent": True}).status_code == 401
+    assert client.get("/api/browser/status").status_code == 401
+
+
+def test_discovery_requires_consent(client, monkeypatch):
+    monkeypatch.setattr(browser, "discover_browsers", lambda **kwargs: pytest.fail("must not discover"))
+    assert client.post("/api/browser/discover", headers=HEADERS, json={}).status_code == 400
+    assert client.post("/api/browser/discover", headers=HEADERS, json={"consent": False}).status_code == 400
+
+
+def test_no_client_filesystem_paths(client, monkeypatch):
+    monkeypatch.setattr(browser, "discover_browsers", lambda **kwargs: pytest.fail("must not discover"))
+    assert client.post("/api/browser/discover", headers=HEADERS,
+                       json={"consent": True, "path": "/secret"}).status_code == 422
+
+
+def test_metadata_response(client, monkeypatch):
+    expected = {"browsers": [], "read_only": True}
+    monkeypatch.setattr(browser, "discover_browsers", lambda **kwargs: expected)
+    response = client.post("/api/browser/discover", headers=HEADERS, json={"consent": True})
+    assert response.status_code == 200
+    assert response.json() == expected
+
+
+@pytest.mark.parametrize("include_emails", [False, True])
+def test_email_scope_is_explicit(client, monkeypatch, include_emails):
+    scopes = []
+
+    def discover(**kwargs):
+        scopes.append(kwargs["include_emails"])
+        return {"read_only": True, "browsers": [], "emails_included": kwargs["include_emails"]}
+
+    monkeypatch.setattr(browser, "discover_browsers", discover)
+    body = {"consent": True}
+    if include_emails:
+        body["include_emails"] = True
+    response = client.post("/api/browser/discover", headers=HEADERS, json=body)
+    assert response.status_code == 200
+    assert scopes == [include_emails]
+    assert response.json()["emails_included"] is include_emails
+
+
+def test_email_flag_does_not_replace_discovery_consent(client, monkeypatch):
+    monkeypatch.setattr(browser, "discover_browsers",
+                        lambda **kwargs: pytest.fail("must not discover"))
+    response = client.post("/api/browser/discover", headers=HEADERS,
+                           json={"include_emails": True})
+    assert response.status_code == 400
+    response = client.post("/api/browser/discover", headers=HEADERS,
+                           json={"consent": True, "include_emails": "true"})
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("content_type,expected_status", [
+    ("text/plain;charset=UTF-8", 422),
+    ("application/json", 200),
+])
+def test_serialized_consent_requires_json_content_type(client, monkeypatch,
+                                                       content_type, expected_status):
+    expected = {"browsers": [], "read_only": True}
+    calls = []
+
+    def discover(**kwargs):
+        calls.append(True)
+        return expected
+
+    monkeypatch.setattr(browser, "discover_browsers", discover)
+    response = client.post("/api/browser/discover",
+                           headers={**HEADERS, "Content-Type": content_type},
+                           content='{"consent":true}')
+    assert response.status_code == expected_status
+    assert calls == ([True] if expected_status == 200 else [])
+    if expected_status == 200:
+        assert response.json() == expected
+
+
+def test_status_preserves_requested_profile_and_hides_cdp(client, monkeypatch):
+    scopes = []
+
+    async def scoped(profile, fn):
+        scopes.append(profile)
+        return fn()
+
+    monkeypatch.setattr(browser, "config_scoped_to_thread", scoped)
+    monkeypatch.setattr(browser, "load_config", lambda: {"browser": {"cdp_url": "https://SECRET"}})
+    response = client.get("/api/browser/status?profile=worker", headers=HEADERS)
+    assert response.status_code == 200
+    assert scopes == ["worker"]
+    assert response.json()["connection_state"] == "not_verified"
+    assert "SECRET" not in response.text
+
+
+def test_probe_never_runs_without_auth_and_explicit_consent(client, monkeypatch):
+    async def forbidden():
+        pytest.fail("must not connect")
+    monkeypatch.setattr(browser, "run_browser_probe", forbidden)
+    assert client.post("/api/browser/probe", json={"consent": True}).status_code == 401
+    for body in ({}, {"consent": False}):
+        assert client.post("/api/browser/probe", headers=HEADERS, json=body).status_code == 400
+    assert client.post("/api/browser/probe", headers=HEADERS,
+                       json={"consent": "true"}).status_code == 422
+    for field in ("url", "path", "profile_id"):
+        assert client.post("/api/browser/probe", headers=HEADERS,
+                           json={"consent": True, field: "SECRET"}).status_code == 422
+
+
+def test_probe_returns_only_transport_result(client, monkeypatch):
+    expected = {"state": "reachable", "product": "Chrome/154.0.8037.98",
+                "protocol_version": "1.3"}
+    calls = []
+    async def probe():
+        calls.append(True)
+        return expected
+    monkeypatch.setattr(browser, "run_browser_probe", probe)
+    response = client.post("/api/browser/probe", headers=HEADERS, json={"consent": True})
+    assert response.status_code == 200
+    assert response.json() == expected
+    assert calls == [True]
+
+
+def test_flow_routes_require_independent_consent_and_refuse_arbitrary_code(client, monkeypatch):
+    async def forbidden(*args):
+        pytest.fail("must not connect")
+    monkeypatch.setattr(browser, "list_flow_tabs", forbidden)
+    monkeypatch.setattr(browser, "check_flow_tab", forbidden)
+    for route, body in [
+        ("/api/browser/flow/tabs", {"consent": True}),
+        ("/api/browser/flow/check", {"consent": True, "target_id": "flow-1"}),
+    ]:
+        assert client.post(route, json=body).status_code == 401
+        assert client.post(route, headers=HEADERS,
+                           json={**body, "consent": False}).status_code == 400
+        for key in ("url", "code", "expression", "profile_path"):
+            assert client.post(route, headers=HEADERS,
+                               json={**body, key: "SECRET"}).status_code == 422
+
+
+def test_flow_check_passes_only_the_explicit_target(client, monkeypatch):
+    seen = []
+    async def check(target):
+        seen.append(target)
+        return {"state": "workspace_visible", "account_verified": False}
+    monkeypatch.setattr(browser, "check_flow_tab", check)
+    response = client.post("/api/browser/flow/check", headers=HEADERS,
+                           json={"consent": True, "target_id": "flow-2"})
+    assert response.status_code == 200
+    assert seen == ["flow-2"]
+    assert response.json()["account_verified"] is False
+
+def test_project_check_requires_auth_consent_and_only_fixed_fields(client, monkeypatch):
+    calls = []
+    async def check(target, url):
+        calls.append((target, url))
+        return {"state": "project_ready", "production_authorized": False}
+    monkeypatch.setattr(browser, "check_flow_project", check)
+    body = {"consent": True, "target_id": "chosen", "project_url": "https://flow.google.com/project/11111111-2222-3333-4444-555555555555"}
+    assert client.post("/api/browser/flow/project", json=body).status_code == 401
+    assert client.post("/api/browser/flow/project", headers=HEADERS, json={**body, "consent": False}).status_code == 400
+    assert client.post("/api/browser/flow/project", headers=HEADERS, json={**body, "expression": "CLICK"}).status_code == 422
+    assert calls == []
+    response = client.post("/api/browser/flow/project", headers=HEADERS, json=body)
+    assert response.status_code == 200
+    assert calls == [(body["target_id"], body["project_url"])]
+    assert response.json()["production_authorized"] is False
+
+
+def test_stage_requires_separate_write_consent_and_scoped_profile(client, monkeypatch, tmp_path):
+    import uuid
+    scopes = []; calls = []
+    async def scoped(profile, fn): scopes.append(profile); return fn()
+    async def stage(store, ident, target, project, items):
+        calls.append((store.path, ident, target, items))
+        return {"state": "text_staged", "production_submitted": False}
+    monkeypatch.setattr(browser, "config_scoped_to_thread", scoped)
+    monkeypatch.setattr(browser, "destructive_profile", lambda profile, route: profile)
+    monkeypatch.setattr(browser, "get_hermes_home", lambda: tmp_path)
+    monkeypatch.setattr(browser, "stage_flow_text", stage)
+    body = {"consent": True, "fill_consent": True, "stage_id": str(uuid.uuid4()), "target_id": "chosen",
+            "project_url": "https://flow.google.com/project/11111111-2222-3333-4444-555555555555",
+            "items": [{"name": "hmx_test_x", "prompt": "prompt"}]}
+    assert client.post("/api/browser/flow/stage", json=body).status_code == 401
+    assert client.post("/api/browser/flow/stage", headers=HEADERS, json={**body, "fill_consent": False}).status_code == 400
+    assert client.post("/api/browser/flow/stage", headers=HEADERS, json={**body, "fill_consent": "true"}).status_code == 422
+    assert client.post("/api/browser/flow/stage", headers=HEADERS, json={**body, "expression": "BAD"}).status_code == 422
+    assert client.post("/api/browser/flow/stage", headers=HEADERS, json={**body, "items": body["items"] * 3}).status_code == 422
+    assert not calls and not scopes
+    response = client.post("/api/browser/flow/stage?profile=worker", headers=HEADERS, json=body)
+    assert response.json()["production_submitted"] is False
+    assert scopes == ["worker"]
+    assert calls[0][0] == tmp_path / "hmx-flow-stages.sqlite3"
+
+
+def test_stage_status_requires_auth_and_does_not_connect(client, monkeypatch, tmp_path):
+    import uuid
+    async def scoped(profile, fn): return fn()
+    monkeypatch.setattr(browser, "config_scoped_to_thread", scoped)
+    monkeypatch.setattr(browser, "destructive_profile", lambda profile, route: profile)
+    monkeypatch.setattr(browser, "get_hermes_home", lambda: tmp_path)
+    ident = str(uuid.uuid4())
+    assert client.get(f"/api/browser/flow/stage/{ident}").status_code == 401
+    assert client.get("/api/browser/flow/stage/not-uuid", headers=HEADERS).status_code == 400
+    assert client.get(f"/api/browser/flow/stage/{ident}?profile=worker", headers=HEADERS).json()["state"] == "not_found"
+
+
+def test_stage_validation_never_echoes_private_prompt(client):
+    import uuid
+    body = {"consent": True, "fill_consent": True, "stage_id": str(uuid.uuid4()), "target_id": "chosen",
+            "project_url": "https://flow.google.com/project/11111111-2222-3333-4444-555555555555",
+            "items": [{"name": "hmx_test_x", "prompt": "PRIVATE_PROMPT" * 300}]}
+    response = client.post("/api/browser/flow/stage", headers=HEADERS, json=body)
+    assert response.status_code == 422
+    assert "PRIVATE_PROMPT" not in response.text
+    response = client.post("/api/browser/flow/stage", headers={**HEADERS, "Content-Type": "application/json"}, content='{"PRIVATE_PROMPT":')
+    assert response.status_code == 422 and "PRIVATE_PROMPT" not in response.text
+
+
+def test_submit_requires_auth_two_strict_permissions_and_bound_record_only(client, monkeypatch, tmp_path):
+    import uuid
+    calls = []; scopes = []
+    async def scoped(profile, fn): scopes.append(profile); return fn()
+    async def submit(store, ident, items):
+        calls.append((store.path, ident, items)); return {'state': 'submit_clicked', 'production_submitted': None}
+    monkeypatch.setattr(browser, 'config_scoped_to_thread', scoped)
+    monkeypatch.setattr(browser, 'destructive_profile', lambda profile, route: profile)
+    monkeypatch.setattr(browser, 'get_hermes_home', lambda: tmp_path)
+    monkeypatch.setattr(browser, 'submit_flow_stage', submit)
+    body = {'stage_id': str(uuid.uuid4()), 'items': [{'name': 'hmx_test_x', 'prompt': 'PRIVATE_PROMPT'}],
+            'submit_consent': True, 'settings_confirmed': True}
+    route = '/api/browser/flow/stage/submit?profile=worker'
+    assert client.post(route, json=body).status_code == 401
+    for key in ('submit_consent', 'settings_confirmed'):
+        assert client.post(route, headers=HEADERS, json={**body, key: False}).status_code == 400
+        assert client.post(route, headers=HEADERS, json={**body, key: 'true'}).status_code == 422
+    for key in ('target_id', 'current_target_id', 'project_url', 'expression'):
+        assert client.post(route, headers=HEADERS, json={**body, key: 'BAD'}).status_code == 422
+    bad = {**body, 'items': [{'name': 'hmx_test_x', 'prompt': 'PRIVATE_PROMPT' * 300}]}
+    response = client.post(route, headers=HEADERS, json=bad)
+    assert response.status_code == 422 and 'PRIVATE_PROMPT' not in response.text
+    assert not calls and not scopes
+    response = client.post(route, headers=HEADERS, json=body)
+    assert response.status_code == 200 and response.json()['production_submitted'] is None
+    assert scopes == ['worker'] and calls[0][0] == tmp_path / 'hmx-flow-stages.sqlite3'
+
+
+def test_agent_diagnostic_requires_auth_strict_consent_and_profile_bound_id(client, monkeypatch, tmp_path):
+    import uuid
+    calls = []; scopes = []
+    async def scoped(profile, fn): scopes.append(profile); return fn()
+    async def inspect(store, ident):
+        calls.append((store.path, ident)); return {'state': 'agent_selected', 'production_authorized': False}
+    monkeypatch.setattr(browser, 'config_scoped_to_thread', scoped)
+    monkeypatch.setattr(browser, 'destructive_profile', lambda profile, route: profile)
+    monkeypatch.setattr(browser, 'get_hermes_home', lambda: tmp_path)
+    monkeypatch.setattr(browser, 'inspect_flow_stage_agent', inspect)
+    body = {'stage_id': str(uuid.uuid4()), 'consent': True}
+    route = '/api/browser/flow/stage/agent-check?profile=worker'
+    assert client.post(route, json=body).status_code == 401
+    assert client.post(route, headers=HEADERS, json={**body, 'consent': False}).status_code == 400
+    assert client.post(route, headers=HEADERS, json={**body, 'consent': 'true'}).status_code == 422
+    for key in ('target_id', 'project_url', 'expression', 'prompt'):
+        response = client.post(route, headers=HEADERS, json={**body, key: 'PRIVATE_PROMPT'})
+        assert response.status_code == 422 and 'PRIVATE_PROMPT' not in response.text
+    assert not scopes and not calls
+    response = client.post(route, headers=HEADERS, json=body)
+    assert response.status_code == 200 and response.json()['production_authorized'] is False
+    assert scopes == ['worker'] and calls == [(tmp_path / 'hmx-flow-stages.sqlite3', body['stage_id'])]
+
+
+def test_current_agent_diagnostic_has_explicit_bounded_target_but_no_caller_project(client, monkeypatch, tmp_path):
+    import uuid
+    calls = []
+    async def scoped(profile, fn): return fn()
+    async def inspect(store, ident, *, current_target_id):
+        calls.append((ident, current_target_id)); return {'state': 'agent_selected', 'production_authorized': False}
+    monkeypatch.setattr(browser, 'config_scoped_to_thread', scoped)
+    monkeypatch.setattr(browser, 'destructive_profile', lambda profile, route: profile)
+    monkeypatch.setattr(browser, 'get_hermes_home', lambda: tmp_path)
+    monkeypatch.setattr(browser, 'inspect_flow_stage_agent', inspect)
+    body = {'stage_id': str(uuid.uuid4()), 'consent': True, 'current_target_id': 'selected-tab'}
+    route = '/api/browser/flow/stage/agent-check?profile=worker'
+    assert client.post(route, json=body).status_code == 401
+    assert client.post(route, headers=HEADERS, json={**body, 'consent': False}).status_code == 400
+    for value in ('bad/id', '', 'a' * 129):
+        assert client.post(route, headers=HEADERS, json={**body, 'current_target_id': value}).status_code == 422
+    assert client.post(route, headers=HEADERS, json={**body, 'project_url': 'PRIVATE'}).status_code == 422
+    assert not calls
+    assert client.post(route, headers=HEADERS, json=body).json()['production_authorized'] is False
+    assert calls == [(body['stage_id'], 'selected-tab')]

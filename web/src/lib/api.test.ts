@@ -55,6 +55,128 @@ function jsonFetchMock(body: unknown = { ok: true }) {
 }
 
 describe("fetchJSON", () => {
+  it("sends explicit current-target consent only for diagnostics, never a caller-selected project", async () => {
+    setManagementProfile("worker");
+    const fetchMock = jsonFetchMock({ state: "agent_selected", production_authorized: false });
+    vi.stubGlobal("fetch", fetchMock);
+    const id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    await api.checkFlowStageAgent(id, "current-tab");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/flow/stage/agent-check?profile=worker");
+    expect((init?.headers as Headers).get(SESSION_HEADER)).toBe("stale-token");
+    expect(JSON.parse(init?.body as string)).toEqual({ stage_id: id, consent: true, current_target_id: "current-tab" });
+  });
+
+  it("binds read-only Agent diagnostics to the owning profile without prompt or target input", async () => {
+    setManagementProfile("worker");
+    const fetchMock = jsonFetchMock({ state: "agent_selected", production_authorized: false });
+    vi.stubGlobal("fetch", fetchMock);
+    const id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    await api.checkFlowStageAgent(id);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/flow/stage/agent-check?profile=worker");
+    expect((init?.headers as Headers).get(SESSION_HEADER)).toBe("stale-token");
+    expect(JSON.parse(init?.body as string)).toEqual({ stage_id: id, consent: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("binds approved submission to the owning profile and sends no caller-selected target", async () => {
+    setManagementProfile("worker");
+    const fetchMock = jsonFetchMock({ state: "submit_clicked", production_submitted: null });
+    vi.stubGlobal("fetch", fetchMock);
+    const items = [{ name: "hmx_test_x", prompt: "Fixture" }];
+    const id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    await api.submitFlowStage(id, items);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/flow/stage/submit?profile=worker");
+    expect((init?.headers as Headers).get(SESSION_HEADER)).toBe("stale-token");
+    expect(JSON.parse(init?.body as string)).toEqual({ stage_id: id, items, submit_consent: true, settings_confirmed: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("binds composer staging and durable status to the selected Hermes profile", async () => {
+    setManagementProfile("worker");
+    const fetchMock = jsonFetchMock({ state: "text_staged", production_submitted: false });
+    vi.stubGlobal("fetch", fetchMock);
+    const items = [{ name: "hmx_test_x", prompt: "Fixture" }];
+    const id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    await api.stageFlowText(id, "chosen", "https://flow.google.com/project/11111111-2222-3333-4444-555555555555", items);
+    await api.getFlowStageStatus(id);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/flow/stage?profile=worker");
+    expect((init?.headers as Headers).get("Content-Type")).toBe("application/json");
+    expect((init?.headers as Headers).get(SESSION_HEADER)).toBe("stale-token");
+    expect(JSON.parse(init?.body as string)).toEqual({ consent: true, fill_consent: true,
+      stage_id: id, target_id: "chosen", project_url: "https://flow.google.com/project/11111111-2222-3333-4444-555555555555", items });
+    expect(fetchMock.mock.calls[1][0]).toBe(`/api/browser/flow/stage/${id}?profile=worker`);
+  });
+
+  it("sends only explicit project preflight consent, selected target and project with auth", async () => {
+    const fetchMock = jsonFetchMock({ state: "project_ready", production_authorized: false });
+    vi.stubGlobal("fetch", fetchMock);
+    const project = "https://flow.google.com/project/11111111-2222-3333-4444-555555555555";
+    await api.checkFlowProject("chosen", project);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/flow/project");
+    expect((init?.headers as Headers).get("Content-Type")).toBe("application/json");
+    expect((init?.headers as Headers).get(SESSION_HEADER)).toBe("stale-token");
+    expect(JSON.parse(init?.body as string)).toEqual({ consent: true, target_id: "chosen", project_url: project });
+  });
+
+  it("sends only Flow consent and the explicitly selected target", async () => {
+    const fetchMock = jsonFetchMock({ state: "listed", targets: [] });
+    vi.stubGlobal("fetch", fetchMock);
+    await api.listFlowTabs();
+    await api.checkFlowTab("flow-2");
+    const [listUrl, listOptions] = fetchMock.mock.calls[0];
+    const [checkUrl, checkOptions] = fetchMock.mock.calls[1];
+    expect(listUrl).toBe("/api/browser/flow/tabs");
+    expect(checkUrl).toBe("/api/browser/flow/check");
+    expect(JSON.parse(listOptions?.body as string)).toEqual({ consent: true });
+    expect(JSON.parse(checkOptions?.body as string)).toEqual({ consent: true, target_id: "flow-2" });
+    for (const options of [listOptions, checkOptions]) {
+      expect(new Headers(options?.headers).get("Content-Type")).toBe("application/json");
+      expect(new Headers(options?.headers).get(SESSION_HEADER)).toBe("stale-token");
+    }
+  });
+  it("sends authenticated JSON consent for the one-shot connection test", async () => {
+    const fetchMock = jsonFetchMock({ state: "reachable" });
+    vi.stubGlobal("fetch", fetchMock);
+    await api.probeBrowserConnection();
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/probe");
+    expect(options?.method).toBe("POST");
+    expect(new Headers(options?.headers).get("Content-Type")).toBe("application/json");
+    expect(new Headers(options?.headers).get(SESSION_HEADER)).toBe("stale-token");
+    expect(JSON.parse(options?.body as string)).toEqual({ consent: true });
+  });
+  it("protects browser discovery with the session header and explicit consent", async () => {
+    const fetchMock = jsonFetchMock({ browsers: [], read_only: true });
+    vi.stubGlobal("fetch", fetchMock);
+    await api.discoverBrowserProfiles();
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/browser/discover");
+    expect(options?.method).toBe("POST");
+    expect(JSON.parse(options?.body as string)).toEqual({ consent: true, include_emails: false });
+    expect(new Headers(options?.headers).get("Content-Type")).toBe("application/json");
+    expect(new Headers(options?.headers).get(SESSION_HEADER)).toBe("stale-token");
+  });
+
+  it("scopes browser configuration to the selected agent profile", async () => {
+    const fetchMock = jsonFetchMock();
+    vi.stubGlobal("fetch", fetchMock);
+    setManagementProfile("worker");
+    await api.getBrowserStatus();
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/browser/status?profile=worker");
+  });
+  it("requests email metadata only when explicitly enabled", async () => {
+    const fetchMock = jsonFetchMock();
+    vi.stubGlobal("fetch", fetchMock);
+    await api.discoverBrowserProfiles(true);
+    expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string)).toEqual({
+      consent: true, include_emails: true,
+    });
+  });
   it("tries the one-shot reload path for loopback 401s", async () => {
     vi.stubGlobal(
       "fetch",

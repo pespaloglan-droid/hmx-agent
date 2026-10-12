@@ -5,6 +5,7 @@ import {
 } from "@hermes/shared";
 
 import type { AuxiliaryModelsResponse } from "./api-aux";
+import { browserApi } from "./api-browser-client";
 import type {
   ManagedFileReadResponse,
   ManagedFilesResponse,
@@ -142,6 +143,8 @@ const PROFILE_SCOPED_PREFIXES = [
   "/api/dashboard/plugins",
   // The shared-metrics answer is one per profile (telemetry.shared_metrics in its config.yaml).
   "/api/shared-metrics",
+  "/api/browser/status",
+  "/api/browser/flow/stage",
 ];
 
 // The dashboard's own profile when nothing else named one. The backend injects it only
@@ -412,6 +415,7 @@ function appendSessionFilters(url: string, options: SessionQueryOptions): string
 }
 
 export const api = {
+  ...browserApi(fetchJSON, (url) => appendProfileParam(url, getManagementProfile())),
   buildWsUrl,
   getStatus: () => fetchJSON<StatusResponse>("/api/status"),
   /**

@@ -487,11 +487,10 @@ DEFAULT_CONFIG = {
             "rewrite_loopback_urls": False,
             "loopback_host_alias": "host.docker.internal",
         },
-        # Authenticated browser-extension controller lane: a registered extension can become the
-        # exact controller for a session's browser_* tools (fail-closed once bound). Local API
-        # registration also requires the API server bearer key. developer_mode gates the privileged
-        # browser_cdp / browser_evaluate capabilities.
+        # Authoritative agent controller; raw CDP/eval remain developer-mode gated.
         "extension_control": {"enabled": False, "developer_mode": False},
+        # Separate local dashboard read-only pairing; no agent session binding.
+        "readonly_connector": {"extension_origin": ""},
     },
     # Filesystem checkpoints: snapshot the working directory once per turn (on the first
     # write_file/patch call); restore with /rollback. Opt-in via `hermes chat --checkpoints` or
